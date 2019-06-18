@@ -1,0 +1,2 @@
+add_executable(cb_thread_test test.cpp)
+target_link_libraries(cb_thread_test cb_thread gtest_main)
