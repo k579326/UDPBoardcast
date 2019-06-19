@@ -148,11 +148,11 @@ static void _cltbc_listen_thread(void* param)
 
 		if (ret != buflen)
 		{
-			printf("[Client BC Listen] error, send %d bytes!\n", ret);
+			// printf("[Client BC Listen] error, send %d bytes!\n", ret);
 		}
 		else
 		{
-			printf("[boardcast from server]: %s\n", (char*)pkg.sys_info.cptname);
+			printf("[boardcast from server]: %s, msg_type: %d\n", (char*)pkg.sys_info.cptname, pkg.msg_type);
 		}
 
 		CB_THREAD_SLEEP_MS(200);
@@ -166,7 +166,7 @@ static void _oriented_feedback(char* clientip)
 {
 	boardcast_package_t pkg;
 	sockaddr_in clientAddr;
-
+	int ret = 0;
 	// TODO: log client ip
 
 	if (!bc_checksocket(g_svr_feedback_sockfd))
@@ -175,12 +175,16 @@ static void _oriented_feedback(char* clientip)
 	}
 
 	clientAddr.sin_family = AF_INET;
-	clientAddr.sin_port = CLIENT_PORT;
+	clientAddr.sin_port = htons(CLIENT_PORT);
 	inet_pton(AF_INET, clientip, &clientAddr.sin_addr);
 	
 	make_discover_pkg(&pkg);
-	sendto(g_svr_feedback_sockfd, (const char*)&pkg, sizeof(boardcast_package_t), 
-		   0, (sockaddr*)&clientAddr, sizeof(clientAddr));
+	ret = sendto(g_svr_feedback_sockfd, (const char*)&pkg, sizeof(boardcast_package_t),
+			0, (sockaddr*)&clientAddr, sizeof(clientAddr));
+	if (ret != sizeof(boardcast_package_t))
+	{
+		printf("[Server Feedback] error , send %d bytes\n", ret);
+	}
 
 	return;
 }
@@ -214,11 +218,11 @@ static void _svrbc_listen_thread(void* param)
 
 		if (ret != buflen)
 		{
-			printf("[Server BC Listen] error, send %d bytes!\n", ret);
+			// printf("[Server BC Listen] error, send %d bytes!\n", ret);
 		}
 		else
 		{
-			printf("[boardcast from client]: %s\n", (char*)pkg.sys_info.cptname);
+			printf("[boardcast from client]: %s£¬msg_type: %d\n", (char*)pkg.sys_info.cptname, pkg.msg_type);
 			_oriented_feedback(inet_ntoa(peerAddr.sin_addr));
 		}
 

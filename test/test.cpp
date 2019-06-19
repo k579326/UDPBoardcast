@@ -24,7 +24,7 @@ int main()
 		return ret;
 	}
 
-	nd_boardcast_startup(1);
+	nd_boardcast_startup(2);
 
 
 	//Sleep(10);
