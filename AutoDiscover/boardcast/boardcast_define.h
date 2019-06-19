@@ -11,7 +11,7 @@
 #include <unistd.h>
 #endif
 
-#define SVR_BOARDCAST_TIMESPACE (10 * 1000)		// ����˹㲥��� 10s
+#define SVR_BOARDCAST_TIMESPACE (10 * 1000)		// 服务端广播间隔
 #define UDP_PACKAGE_MAX_LEN 1450
 
 #define SERVER_PORT 10034
@@ -21,5 +21,8 @@
 #ifndef _WIN32
 #define SOCKET long long 
 #endif
+
+
+
 
 

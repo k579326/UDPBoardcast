@@ -11,7 +11,6 @@
 #endif
 
 
-
 int main()
 {
 #ifdef _WIN32
@@ -25,7 +24,7 @@ int main()
 		return ret;
 	}
 
-	nd_boardcast_startup(2);
+	nd_boardcast_startup(1);
 
 
 	//Sleep(10);

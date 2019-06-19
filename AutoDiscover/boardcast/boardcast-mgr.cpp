@@ -1,11 +1,13 @@
+#include <list>
+#include "cb_thread.h"
+#include "uv.h"
 
 #include "boardcast-mgr.h"
 #include "boardcast-server.h"
-#include "cb_thread.h"
-#include "uv.h"
+
+#include "boardcast_protocol.h"
 #include "boardcast_common.h"
 #include "boardcast_define.h"
-#include <list>
 
 
 typedef struct
@@ -21,8 +23,7 @@ typedef struct
 static boardcast_listen_t g_cltbc_listen;		// 用于接收服务端广播
 static boardcast_listen_t g_svrbc_listen;		// 用于接收客户端广播
 
-
-long g_run_model = 0;
+static SOCKET g_svr_feedback_sockfd = -1;
 
 
 
@@ -118,13 +119,11 @@ exit:
 }
 
 
-
-
 static void _cltbc_listen_thread(void* param)
 {
 	int ret = 0;
-	uint8_t buf[UDP_PACKAGE_MAX_LEN];
-	uint16_t buflen = UDP_PACKAGE_MAX_LEN;
+	boardcast_package_t pkg;
+	uint16_t buflen;
 	sockaddr_in peerAddr;
 	socklen_t addrlen;
 
@@ -136,7 +135,7 @@ static void _cltbc_listen_thread(void* param)
 			break;
 		}
 
-		buflen = UDP_PACKAGE_MAX_LEN;
+		buflen = sizeof(pkg);
 		addrlen = sizeof(peerAddr);
 
 		uv_mutex_lock(&g_cltbc_listen.mutex);
@@ -144,29 +143,55 @@ static void _cltbc_listen_thread(void* param)
 		{
 			uv_cond_wait(&g_cltbc_listen.cond, &g_cltbc_listen.mutex);
 		}
-		ret = recvfrom(g_cltbc_listen.sockfd, (char*)buf, buflen, 0, (sockaddr*)&peerAddr, &addrlen);
+		ret = recvfrom(g_cltbc_listen.sockfd, (char*)&pkg, buflen, 0, (sockaddr*)&peerAddr, &addrlen);
 		uv_mutex_unlock(&g_cltbc_listen.mutex);
 
-		if (ret <= 0)
+		if (ret != buflen)
 		{
-			//printf("[boardcast from server]: error %d\n", ret);
+			printf("[Client BC Listen] error, send %d bytes!\n", ret);
 		}
 		else
 		{
-			printf("[boardcast from server]: %s\n", (char*)buf);
+			printf("[boardcast from server]: %s\n", (char*)pkg.sys_info.cptname);
 		}
 
-		CB_THREAD_SLEEP_MS(500);
+		CB_THREAD_SLEEP_MS(200);
 	}
 	
+	return;
+}
+
+
+static void _oriented_feedback(unsigned long clientip)
+{
+	boardcast_package_t pkg;
+	sockaddr_in clientAddr;
+
+	char ipstring[64];
+	inet_pton(AF_INET, ipstring, &clientip);
+	// TODO: log client ip
+
+	if (!bc_checksocket(g_svr_feedback_sockfd))
+	{
+		return; // TODO:
+	}
+
+	clientAddr.sin_family = AF_INET;
+	clientAddr.sin_port = CLIENT_PORT;
+	clientAddr.sin_addr.S_un.S_addr = clientip;
+	
+	make_discover_pkg(&pkg);
+	sendto(g_svr_feedback_sockfd, (const char*)&pkg, sizeof(boardcast_package_t), 
+		   0, (sockaddr*)&clientAddr, sizeof(clientAddr));
+
 	return;
 }
 
 static void _svrbc_listen_thread(void* param)
 {
 	int ret = 0;
-	uint8_t buf[UDP_PACKAGE_MAX_LEN];
-	uint16_t buflen = UDP_PACKAGE_MAX_LEN;
+	boardcast_package_t pkg;
+	uint16_t buflen;
 	sockaddr_in peerAddr;
 	socklen_t addrlen;
 
@@ -178,7 +203,7 @@ static void _svrbc_listen_thread(void* param)
 			break;
 		}
 
-		buflen = UDP_PACKAGE_MAX_LEN;
+		buflen = sizeof(boardcast_package_t);
 		addrlen = sizeof(peerAddr);
 
 		uv_mutex_lock(&g_svrbc_listen.mutex);
@@ -186,30 +211,33 @@ static void _svrbc_listen_thread(void* param)
 		{
 			uv_cond_wait(&g_svrbc_listen.cond, &g_svrbc_listen.mutex);
 		}
-		ret = recvfrom(g_svrbc_listen.sockfd, (char*)buf, buflen, 0, (sockaddr*)&peerAddr, &addrlen);
+		ret = recvfrom(g_svrbc_listen.sockfd, (char*)&pkg, buflen, 0, (sockaddr*)&peerAddr, &addrlen);
 		uv_mutex_unlock(&g_svrbc_listen.mutex);
 
-		if (ret <= 0)
+		if (ret != buflen)
 		{
-			//printf("[boardcast from client]: error %d\n", ret);
+			printf("[Server BC Listen] error, send %d bytes!\n", ret);
 		}
 		else
 		{
-			printf("[boardcast from client]: %s\n", (char*)buf);
+			printf("[boardcast from client]: %s\n", (char*)pkg.sys_info.cptname);
 		}
 
-		CB_THREAD_SLEEP_MS(500);
+		CB_THREAD_SLEEP_MS(200);
 	}
 
 	return;
 }
 
 
-static int _client_do_boardcast()
+static int _client_do_boardcast(bool isStop)
 {
 	int ret = 0;
+	boardcast_package_t pkg;
+
 	sockaddr_in server_addr;
 	SOCKET sockfd;
+
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (!bc_checksocket(sockfd))
 	{
@@ -235,9 +263,12 @@ static int _client_do_boardcast()
 	//	goto exit; // TODO:
 	//}
 
-	ret = sendto(sockfd, "88899999999", 13, 0, (sockaddr*)&server_addr, sizeof(server_addr));
-	if (ret <= 0)
+	isStop ? make_shutdown_pkg(&pkg) : make_discover_pkg(&pkg);
+
+	ret = sendto(sockfd, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
+	if (ret != sizeof(boardcast_package_t))
 	{
+		printf("[Client Boardcast] error, send %d bytes!\n", ret);
 		ret = -1;
 		goto exit; // TODO:
 	}
@@ -247,7 +278,18 @@ exit:
 	return ret;
 }
 
+static int _create_svr_feedback_res()
+{
+	int ret = 0;
 
+	g_svr_feedback_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (!bc_checksocket(g_svr_feedback_sockfd))
+	{
+		return -1; // TODO:
+	}
+
+	return 0;
+}
 
 
 int auto_sch_init()
@@ -261,6 +303,9 @@ int auto_sch_init()
 //		return ret; // TODO:
 //	}
 //#endif
+
+	sys_environment_init();
+
 	ret = _create_server_listen_res();
 	if (ret != 0)
 	{
@@ -292,6 +337,9 @@ int auto_sch_init()
 
 	uv_sem_wait(&g_cltbc_listen.sem_exit);
 	uv_sem_wait(&g_svrbc_listen.sem_exit);
+
+	// 创建服务器定向反馈socket
+	_create_svr_feedback_res();
 
 	uv_thread_create(&g_cltbc_listen.thread, _cltbc_listen_thread, NULL);
 	uv_thread_create(&g_svrbc_listen.thread, _svrbc_listen_thread, NULL);
@@ -341,7 +389,7 @@ int auto_sch_uninit()
 
 	bc_cleansocket(&g_cltbc_listen.sockfd);
 	bc_cleansocket(&g_svrbc_listen.sockfd);
-
+	bc_cleansocket(&g_svr_feedback_sockfd);
 
 	return 0;
 }
@@ -355,7 +403,7 @@ int auto_sch_runas_client()
 
 	uv_cond_signal(&g_cltbc_listen.cond);
 
-	ret = _client_do_boardcast();
+	ret = _client_do_boardcast(false);
 	// TODO: 不强制要求成功，如果失败，输出日志
 
 
@@ -386,7 +434,7 @@ int auto_sch_stop_client()
 	g_svrbc_listen.pause = true;
 	uv_mutex_unlock(&g_cltbc_listen.mutex);
 
-	ret = _client_do_boardcast();
+	ret = _client_do_boardcast(true);
 	// TODO: 不强制要求成功，如果失败，输出日志
 
 	return 0;

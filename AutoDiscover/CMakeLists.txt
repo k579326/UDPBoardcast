@@ -2,13 +2,12 @@
 
 cmake_minimum_required(VERSION 3.0)
 
+FILE(GLOB BOARDCASTSRC boardcast/*.cpp)
+FILE(GLOB BOARDCASTHEADER boardcast/*.h)
 
 add_library(net_discover STATIC discover.cpp discover.h
-			boardcast/boardcast-mgr.h boardcast/boardcast-mgr.cpp
-			boardcast/boardcast-server.cpp boardcast/boardcast-server.h
-			boardcast/boardcast_common.h boardcast/boardcast_common.cpp)
+			${BOARDCASTSRC} ${BOARDCASTHEADER})
 
 
-
-target_link_libraries(net_discover libuv cb_thread)
+target_link_libraries(net_discover libuv cb_thread cb_sysinfo)
 

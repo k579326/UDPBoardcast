@@ -3,6 +3,7 @@
 #include "uv.h"
 #include "boardcast-server.h"
 #include "cb_thread.h"
+#include "boardcast_protocol.h"
 #include "boardcast_common.h"
 #include "boardcast_define.h"
 
@@ -56,10 +57,15 @@ exit:
 static void _boardcast_svr_msg(void* msg)
 {
 	int ret = 0;
+
+	boardcast_package_t pkg;
+
 	sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 	server_addr.sin_port = htons(CLIENT_PORT);
+
+	make_discover_pkg(&pkg);
 
 	while (1)
 	{
@@ -75,15 +81,21 @@ static void _boardcast_svr_msg(void* msg)
 			uv_cond_wait(&g_svr_bc.cond, &g_svr_bc.mutex);
 		}
 		uv_mutex_unlock(&g_svr_bc.mutex);
-		ret = sendto(g_svr_bc.sockfd, "5544668", 8, 0, (sockaddr*)& server_addr, sizeof(server_addr));
-		if (ret <= 0)
+		ret = sendto(g_svr_bc.sockfd, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
+		if (ret != sizeof(boardcast_package_t))
 		{
 			// TODO:
+			printf("[Server Boardcast] error, send %d bytes!\n", ret);
 		}
 
 		CB_THREAD_SLEEP_MS(SVR_BOARDCAST_TIMESPACE);
 	}
 
+	// 退出前广播一次
+	make_shutdown_pkg(&pkg);
+	sendto(g_svr_bc.sockfd, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
+
+	return;
 }
 
 
