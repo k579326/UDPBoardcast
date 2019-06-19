@@ -162,13 +162,11 @@ static void _cltbc_listen_thread(void* param)
 }
 
 
-static void _oriented_feedback(unsigned long clientip)
+static void _oriented_feedback(char* clientip)
 {
 	boardcast_package_t pkg;
 	sockaddr_in clientAddr;
 
-	char ipstring[64];
-	inet_pton(AF_INET, ipstring, &clientip);
 	// TODO: log client ip
 
 	if (!bc_checksocket(g_svr_feedback_sockfd))
@@ -178,7 +176,7 @@ static void _oriented_feedback(unsigned long clientip)
 
 	clientAddr.sin_family = AF_INET;
 	clientAddr.sin_port = CLIENT_PORT;
-	clientAddr.sin_addr.S_un.S_addr = clientip;
+	inet_pton(AF_INET, clientip, &clientAddr.sin_addr);
 	
 	make_discover_pkg(&pkg);
 	sendto(g_svr_feedback_sockfd, (const char*)&pkg, sizeof(boardcast_package_t), 
@@ -221,6 +219,7 @@ static void _svrbc_listen_thread(void* param)
 		else
 		{
 			printf("[boardcast from client]: %s\n", (char*)pkg.sys_info.cptname);
+			_oriented_feedback(inet_ntoa(peerAddr.sin_addr));
 		}
 
 		CB_THREAD_SLEEP_MS(200);
