@@ -20,8 +20,8 @@ typedef struct
 	uv_sem_t sem_exit;
 }boardcast_listen_t;
 
-static boardcast_listen_t g_cltbc_listen;		// ÓÃÓÚ½ÓÊÕ·şÎñ¶Ë¹ã²¥
-static boardcast_listen_t g_svrbc_listen;		// ÓÃÓÚ½ÓÊÕ¿Í»§¶Ë¹ã²¥
+static boardcast_listen_t g_cltbc_listen;		// ç”¨äºæ¥æ”¶æœåŠ¡ç«¯å¹¿æ’­
+static boardcast_listen_t g_svrbc_listen;		// ç”¨äºæ¥æ”¶å®¢æˆ·ç«¯å¹¿æ’­
 
 static SOCKET g_svr_feedback_sockfd = -1;
 
@@ -183,7 +183,7 @@ static void _oriented_feedback(char* clientip)
 			0, (sockaddr*)&clientAddr, sizeof(clientAddr));
 	if (ret != sizeof(boardcast_package_t))
 	{
-		printf("[Server Feedback] error , send %d bytes\n", ret);
+		printf("[Server Feedback] error, send %d bytes\n", ret);
 	}
 
 	return;
@@ -222,7 +222,7 @@ static void _svrbc_listen_thread(void* param)
 		}
 		else
 		{
-			printf("[boardcast from client]: %s£¬msg_type: %d\n", (char*)pkg.sys_info.cptname, pkg.msg_type);
+			printf("[boardcast from client]: %s, msg_type: %d\n", (char*)pkg.sys_info.cptname, pkg.msg_type);
 			_oriented_feedback(inet_ntoa(peerAddr.sin_addr));
 		}
 
@@ -324,7 +324,7 @@ int auto_sch_init()
 	ret = svr_boardcast_init();
 	if (ret != 0)
 	{
-		// TODO: ·şÎñ¹ã²¥³õÊ¼»¯Ê§°Ü
+		// TODO: æœåŠ¡å¹¿æ’­åˆå§‹åŒ–å¤±è´¥
 	}
 
 	g_cltbc_listen.pause = true;
@@ -341,7 +341,7 @@ int auto_sch_init()
 	uv_sem_wait(&g_cltbc_listen.sem_exit);
 	uv_sem_wait(&g_svrbc_listen.sem_exit);
 
-	// ´´½¨·şÎñÆ÷¶¨Ïò·´À¡socket
+	// åˆ›å»ºæœåŠ¡å™¨å®šå‘åé¦ˆsocket
 	_create_svr_feedback_res();
 
 	uv_thread_create(&g_cltbc_listen.thread, _cltbc_listen_thread, NULL);
@@ -365,12 +365,12 @@ int auto_sch_uninit()
 	uv_sem_post(&g_cltbc_listen.sem_exit);
 	uv_sem_post(&g_svrbc_listen.sem_exit);
 
-	// »½ĞÑ¹ÒÆğµÄÏß³Ì
+	// å”¤é†’æŒ‚èµ·çš„çº¿ç¨‹
 	uv_mutex_lock(&g_cltbc_listen.mutex);
 	g_cltbc_listen.pause = false;
 	uv_mutex_unlock(&g_cltbc_listen.mutex);
 
-	// »½ĞÑ¹ÒÆğµÄÏß³Ì
+	// å”¤é†’æŒ‚èµ·çš„çº¿ç¨‹
 	uv_mutex_lock(&g_svrbc_listen.mutex);
 	g_svrbc_listen.pause = false;
 	uv_mutex_unlock(&g_svrbc_listen.mutex);
@@ -407,7 +407,7 @@ int auto_sch_runas_client()
 	uv_cond_signal(&g_cltbc_listen.cond);
 
 	ret = _client_do_boardcast(false);
-	// TODO: ²»Ç¿ÖÆÒªÇó³É¹¦£¬Èç¹ûÊ§°Ü£¬Êä³öÈÕÖ¾
+	// TODO: ä¸å¼ºåˆ¶è¦æ±‚æˆåŠŸï¼Œå¦‚æœå¤±è´¥ï¼Œè¾“å‡ºæ—¥å¿—
 
 
 	return 0;
@@ -438,7 +438,7 @@ int auto_sch_stop_client()
 	uv_mutex_unlock(&g_cltbc_listen.mutex);
 
 	ret = _client_do_boardcast(true);
-	// TODO: ²»Ç¿ÖÆÒªÇó³É¹¦£¬Èç¹ûÊ§°Ü£¬Êä³öÈÕÖ¾
+	// TODO: ä¸å¼ºåˆ¶è¦æ±‚æˆåŠŸï¼Œå¦‚æœå¤±è´¥ï¼Œè¾“å‡ºæ—¥å¿—
 
 	return 0;
 }

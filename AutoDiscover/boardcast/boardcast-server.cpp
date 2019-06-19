@@ -78,6 +78,18 @@ static void _boardcast_svr_msg(void* msg)
 		uv_mutex_lock(&g_svr_bc.mutex);
 		if (g_svr_bc.pause)
 		{
+			// 停止前广播一次服务模式关闭
+			make_shutdown_pkg(&pkg);
+			ret = sendto(g_svr_bc.sockfd, (char*)& pkg, sizeof(boardcast_package_t), 0, (sockaddr*)& server_addr, sizeof(server_addr));
+			if (ret != sizeof(boardcast_package_t))
+			{
+				printf("[Server Boardcast] error, send %d bytes!\n", ret);
+			}
+			else
+			{
+				printf("[Server Boardcast] server %s close!\n", pkg.sys_info.cptname);
+			}
+
 			uv_cond_wait(&g_svr_bc.cond, &g_svr_bc.mutex);
 		}
 		uv_mutex_unlock(&g_svr_bc.mutex);
@@ -91,10 +103,7 @@ static void _boardcast_svr_msg(void* msg)
 		CB_THREAD_SLEEP_MS(SVR_BOARDCAST_TIMESPACE);
 	}
 
-	// �˳�ǰ�㲥һ��
-	make_shutdown_pkg(&pkg);
-	sendto(g_svr_bc.sockfd, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
-
+	
 	return;
 }
 

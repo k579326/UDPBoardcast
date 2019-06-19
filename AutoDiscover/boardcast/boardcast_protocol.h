@@ -11,7 +11,7 @@
 
 #define BOARDCAST_MAGIC_NUM 0x94623744
 
-// ¹ã²¥ÏûÏ¢ÀàĞÍ
+// å¹¿æ’­æ¶ˆæ¯ç±»å‹
 #define BOARDCAST_MSG_STARTUP		1
 #define BOARDCAST_MSG_SHUTDOWN		2
 
@@ -22,19 +22,19 @@
 
 typedef struct
 {
-	char cptname[64];		// µ±Ç°ÏµÍ³ÓÃ»§Ãû³Æ£¬½á¹¹Ìå´óĞ¡ÓĞÏŞ£¬´Ë×Ö¶ÎÔÊĞí¿Õ¼ä²»×ã£¬copyÊ±×¢Òâ´óĞ¡, Ê¹ÓÃUTF8±àÂë
-	char sysver[128];		// ÏµÍ³°æ±¾£¬Ê¹ÓÃUTF8±àÂë
-	uint8_t bits;				// ÏµÍ³Î»Êı 0£ºx86, 1£ºx64
+	char cptname[64];		// å½“å‰ç³»ç»Ÿç”¨æˆ·åç§°ï¼Œç»“æ„ä½“å¤§å°æœ‰é™ï¼Œæ­¤å­—æ®µå…è®¸ç©ºé—´ä¸è¶³ï¼Œcopyæ—¶æ³¨æ„å¤§å°, ä½¿ç”¨UTF8ç¼–ç 
+	char sysver[128];		// ç³»ç»Ÿç‰ˆæœ¬ï¼Œä½¿ç”¨UTF8ç¼–ç 
+	uint8_t bits;				// ç³»ç»Ÿä½æ•° 0ï¼šx86, 1ï¼šx64
 }system_info_t;
 
 
-// ´Ë½á¹¹Ìå²»ÔÊĞí³¬¹ı 1450 ×Ö½Ú 
+// æ­¤ç»“æ„ä½“ä¸å…è®¸è¶…è¿‡ 1450 å­—èŠ‚ 
 typedef struct
 {
 	uint8_t version;
 	uint32_t magic;
 	system_info_t sys_info;
-	uint8_t msg_type;			// ¹ã²¥ÏûÏ¢ÀàĞÍ BOARDCAST_MSG_STARTUP or BOARDCAST_MSG_SHUTDOWN
+	uint8_t msg_type;			// å¹¿æ’­æ¶ˆæ¯ç±»å‹ BOARDCAST_MSG_STARTUP or BOARDCAST_MSG_SHUTDOWN
 }boardcast_package_t;
 
 #pragma pack(pop)

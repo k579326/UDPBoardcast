@@ -12,8 +12,8 @@ static system_info_t g_sysinfo = { 0 };
 
 void sys_environment_init()
 {
-	char sysver[512];
-	char cptname[256];
+	char sysver[512] = { 0 };
+	char cptname[256] = { 0 };
 	int len = 256;
 	int bits = -1;
 
