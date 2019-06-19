@@ -1,5 +1,6 @@
 
-
+#include <stdlib.h>
+#include <stdio.h>
 #include "discover.h"
 #include "boardcast/boardcast-mgr.h"
 
