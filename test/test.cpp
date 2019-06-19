@@ -1,8 +1,6 @@
 
 
 
-
-
 #include "discover.h"
 #include <stdio.h>
 
@@ -28,12 +26,6 @@ int main()
 	//nd_set_running_type(MIX_RUN_TYPE);
 	//nd_set_running_type(SVR_RUN_TYPE);
 	//nd_set_running_type(SVR_RUN_TYPE);
-
-	//Sleep(10);
-	//nd_boardcast_startup(1);
-	//
-	//Sleep(30);
-	//nd_boardcast_startup(2);
 
 	getchar();
 
