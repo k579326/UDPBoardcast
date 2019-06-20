@@ -41,7 +41,7 @@ typedef struct
 
 
 void make_shutdown_pkg(boardcast_package_t* pkg);
-void make_discover_pkg(boardcast_package_t* pkg);
+void make_active_pkg(boardcast_package_t* pkg);
 
 
 

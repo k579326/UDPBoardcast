@@ -6,8 +6,13 @@
 #include "boardcast_define.h"
 
 
-int bc_setnonblock(SOCKET sockfd);
-int bc_cleansocket(SOCKET* sock);
-bool bc_checksocket(SOCKET sockfd);
+int setnonblock(SOCKET sockfd);
+int cleansocket(SOCKET* sock);
+bool checksocket(SOCKET sockfd);
+
+SOCKET create_boardcast_socket();
+SOCKET create_listen_udp_socket(short port);
+SOCKET create_udp_socket();
+
 system_info_t* systemInfo();
 

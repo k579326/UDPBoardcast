@@ -5,60 +5,15 @@
 #include "cb_thread.h"
 #include "uv.h"
 
-#include "boardcast-mgr.h"
+#include "boardcast_client.h"
 #include "boardcast_protocol.h"
 #include "boardcast_common.h"
 #include "boardcast_define.h"
 
 
-static boardcast_socket_t g_cltbc_listen;		// 用于接收服务端广播
-
-static int _create_client_listen_res()
-{
-	int ret = 0;
-	sockaddr_in client_addr;
-
-	g_cltbc_listen.sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (!bc_checksocket(g_cltbc_listen.sockfd))
-	{
-		return -1; // TODO:
-	}
-
-	client_addr.sin_family = AF_INET;
-	client_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	client_addr.sin_port = htons(CLIENT_PORT);
-
-	int optval = 1;
-	ret = setsockopt(g_cltbc_listen.sockfd, SOL_SOCKET, SO_BROADCAST, (char*)&optval, sizeof(int));
-	if (ret < 0)
-	{
-		ret = -1;
-		goto exit; // TODO:
-	}
-
-	ret = bc_setnonblock(g_cltbc_listen.sockfd);
-	if (ret < 0)
-	{
-		ret = -1;
-		goto exit; // TODO:
-	}
-
-	ret = bind(g_cltbc_listen.sockfd, (sockaddr*)&client_addr, sizeof(client_addr));
-	if (ret != 0)
-	{
-		ret = -1;
-		goto exit;  // TODO:
-	}
-
-exit:
-	if (ret == -1)
-	{
-		bc_cleansocket(&g_cltbc_listen.sockfd);
-	}
-
-	return ret;
-}
-
+static socket_env_t g_cltbc_listen;		// 用于接收服务端广播
+static SOCKET g_clt_stutdown_socket = -1;		// 用于客户端停止是发送消息
+static SOCKET g_clt_startup_socket = -1;
 
 static void _cltbc_listen_thread(void* param)
 {
@@ -104,51 +59,25 @@ static void _cltbc_listen_thread(void* param)
 
 
 
-static int _client_do_boardcast()
+static int _client_startup_boardcast()
 {
 	int ret = 0;
 	boardcast_package_t pkg;
-
 	sockaddr_in server_addr;
-	SOCKET sockfd;
-
-	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (!bc_checksocket(sockfd))
-	{
-		return -1; // TODO:
-	}
 
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 	server_addr.sin_port = htons(SERVER_PORT);
 
-	int optval = 1;
-	ret = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (char*)&optval, sizeof(int));
-	if (ret < 0)
-	{
-		ret = -1;
-		goto exit; // TODO:
-	}
+	make_active_pkg(&pkg);
 
-	//ret = _setnonblock(sockfd);
-	//if (ret < 0)
-	//{
-	//	ret = -1;
-	//	goto exit; // TODO:
-	//}
-
-	make_discover_pkg(&pkg);
-
-	ret = sendto(sockfd, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
+	ret = sendto(g_clt_startup_socket, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
 	if (ret != sizeof(boardcast_package_t))
 	{
 		printf("[Client Boardcast] error, send %d bytes!\n", ret);
-		ret = -1;
-		goto exit; // TODO:
+		return -1;
 	}
 
-exit:
-	bc_cleansocket(&sockfd);
 	return ret;
 }
 
@@ -156,12 +85,25 @@ exit:
 int clt_model_init()
 {
 	int ret = 0;
-
-	ret = _create_client_listen_res();
-	if (ret != 0)
+	g_cltbc_listen.sockfd = create_listen_udp_socket(CLIENT_PORT);
+	if (g_cltbc_listen.sockfd == -1)
 	{
-		bc_cleansocket(&g_cltbc_listen.sockfd);
-		return ret;
+		ret = -1;  // TODO:
+		goto exit;
+	}
+
+	g_clt_startup_socket = create_boardcast_socket();
+	if (g_clt_startup_socket == -1)
+	{
+		ret = -1;  // TODO:
+		goto exit;
+	}
+
+	g_clt_stutdown_socket = create_udp_socket();
+	if (g_clt_stutdown_socket == -1)
+	{
+		ret = -1;  // TODO:
+		goto exit;
 	}
 
 	g_cltbc_listen.pause = true;
@@ -172,8 +114,19 @@ int clt_model_init()
 
 	uv_thread_create(&g_cltbc_listen.thread, _cltbc_listen_thread, NULL);
 
+exit:
+
+	if (ret != 0)
+	{
+		cleansocket(&g_cltbc_listen.sockfd);
+		cleansocket(&g_clt_startup_socket);
+		cleansocket(&g_clt_stutdown_socket);
+	}
+
 	return ret;
 }
+
+
 int clt_model_start()
 {
 	int ret = 0;
@@ -183,7 +136,7 @@ int clt_model_start()
 
 	uv_cond_signal(&g_cltbc_listen.cond);
 
-	ret = _client_do_boardcast();
+	ret = _client_startup_boardcast();
 	// TODO: 不强制要求成功，如果失败，输出日志
 
 	return 0;
@@ -195,7 +148,7 @@ int clt_model_stop()
 	g_cltbc_listen.pause = true;
 	uv_mutex_unlock(&g_cltbc_listen.mutex);
 
-	ret = _client_do_boardcast(true);
+	//ret = _client_do_boardcast(true);
 	// TODO: 不强制要求成功，如果失败，输出日志
 
 	return 0;
@@ -216,7 +169,7 @@ int clt_model_uninit()
 	uv_mutex_destroy(&g_cltbc_listen.mutex);
 	uv_sem_destroy(&g_cltbc_listen.sem_exit);
 
-	bc_cleansocket(&g_cltbc_listen.sockfd);
+	cleansocket(&g_cltbc_listen.sockfd);
 
 	return 0;
 }

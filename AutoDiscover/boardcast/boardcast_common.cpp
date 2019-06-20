@@ -4,7 +4,7 @@
 #include "boardcast_common.h"
 #include "boardcast_define.h"
 
-int bc_setnonblock(SOCKET sockfd)
+int setnonblock(SOCKET sockfd)
 {
 	int ret = 0;
 #ifndef _WIN32
@@ -18,7 +18,7 @@ int bc_setnonblock(SOCKET sockfd)
 	return ret;
 }
 
-int bc_cleansocket(SOCKET* sock)
+int cleansocket(SOCKET* sock)
 {
 	if (*sock < 0)
 	{
@@ -35,7 +35,7 @@ int bc_cleansocket(SOCKET* sock)
 }
 
 
-bool bc_checksocket(SOCKET sockfd)
+bool checksocket(SOCKET sockfd)
 {
 #ifdef _WIN32
 	return sockfd != INVALID_SOCKET;
@@ -43,6 +43,71 @@ bool bc_checksocket(SOCKET sockfd)
 	return sockfd >= 0;
 #endif
 }
+
+
+SOCKET create_boardcast_socket()
+{
+	int ret = 0;
+	SOCKET skfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (!checksocket(skfd))
+	{
+		return -1; // TODO:
+	}
+
+	int optval = 1;
+	ret = setsockopt(skfd, SOL_SOCKET, SO_BROADCAST, (char*)& optval, sizeof(int));
+	if (ret < 0)
+	{
+		cleansocket(&skfd); // TODO:
+		return -1;
+	}
+
+	return skfd;
+}
+
+SOCKET create_listen_udp_socket(short port)
+{
+	int ret = 0;
+	sockaddr_in addr;
+
+	SOCKET skfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (!checksocket(skfd))
+	{
+		return -1; // TODO:
+	}
+	ret = setnonblock(skfd);
+	if (ret < 0)
+	{
+		cleansocket(&skfd); // TODO:
+		return -1;
+	}
+
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_port = htons(port);
+
+	ret = bind(skfd, (sockaddr*)& addr, sizeof(addr));
+	if (ret < 0)
+	{
+		cleansocket(&skfd); // TODO:
+		return -1;
+	}
+
+	return skfd;
+}
+
+
+SOCKET create_udp_socket()
+{
+	int ret = 0;
+	SOCKET skfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (!checksocket(skfd))
+	{
+		return -1; // TODO:
+	}
+	return skfd;
+}
+
 
 
 system_info_t* systemInfo()

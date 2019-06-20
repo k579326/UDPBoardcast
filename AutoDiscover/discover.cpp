@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include "discover.h"
 #include "boardcast/boardcast_protocol.h"
-#include "boardcast/boardcast-mgr.h"
-#include "boardcast/boardcast-server.h"
+#include "boardcast/boardcast_client.h"
+#include "boardcast/boardcast_server.h"
 
 static int g_runType = NONE_RUN_TYPE;
 

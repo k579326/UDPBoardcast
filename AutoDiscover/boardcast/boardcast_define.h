@@ -7,9 +7,8 @@
 #include "uv.h"
 
 #ifdef _WIN32
-#include <WS2tcpip.h>
-#include <winsock2.h>
 #include <Windows.h>
+#include <WS2tcpip.h>
 #else
 #include <fcntl.h>
 #include <unistd.h>
@@ -34,7 +33,7 @@ typedef struct
 	uv_mutex_t mutex;
 	uv_cond_t cond;
 	uv_sem_t sem_exit;
-}boardcast_socket_t;
+}socket_env_t;
 
 
 

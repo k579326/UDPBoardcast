@@ -1,96 +1,19 @@
 
 #include <stdbool.h>
-#include "uv.h"
-#include "boardcast-server.h"
+#include "boardcast_server.h"
+
 #include "cb_thread.h"
 #include "boardcast_protocol.h"
 #include "boardcast_common.h"
+
+#include "uv.h"
 #include "boardcast_define.h"
 
 
-static boardcast_socket_t g_svr_bc;			// 用于服务器广播
-static boardcast_socket_t g_svrbc_listen;		// 用于接收客户端广播
+static socket_env_t g_svr_bc;			// 用于服务器广播
+static socket_env_t g_svrbc_listen;		// 用于接收客户端广播
 
 static SOCKET g_svr_feedback_sockfd = -1;	// 定向反馈socket
-
-
-static int _create_server_listen_res()
-{
-	int ret = 0;
-	sockaddr_in server_addr;
-
-	g_svrbc_listen.sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (!bc_checksocket(g_svrbc_listen.sockfd))
-	{
-		return -1; // TODO:
-	}
-
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	server_addr.sin_port = htons(SERVER_PORT);
-
-	int optval = 1;
-	ret = setsockopt(g_svrbc_listen.sockfd, SOL_SOCKET, SO_BROADCAST, (char*)& optval, sizeof(int));
-	if (ret < 0)
-	{
-		ret = -1;
-		goto exit; // TODO:
-	}
-
-	ret = bc_setnonblock(g_svrbc_listen.sockfd);
-	if (ret < 0)
-	{
-		ret = -1;
-		goto exit; // TODO:
-	}
-
-	ret = bind(g_svrbc_listen.sockfd, (sockaddr*)&server_addr, sizeof(server_addr));
-	if (ret < 0)
-	{
-		ret = -1;
-		goto exit; // TODO:
-	}
-exit:
-	if (ret == -1)
-	{
-		bc_cleansocket(&g_svrbc_listen.sockfd);
-	}
-
-	return ret;
-}
-
-
-static int _create_svr_boardcast_socket()
-{
-	int ret = 0;
-
-	g_svr_bc.sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (!bc_checksocket(g_svr_bc.sockfd))
-	{
-		return -1; // TODO:
-	}
-
-	int optval = 1;
-	ret = setsockopt(g_svr_bc.sockfd, SOL_SOCKET, SO_BROADCAST, (char*)& optval, sizeof(int));
-	if (ret < 0)
-	{
-		ret = -1;
-		goto exit; // TODO:
-	}
-
-	//ret = _setnonblock(sockfd);
-	//if (ret < 0)
-	//{
-	//	ret = -1;
-	//	goto exit; // TODO:
-	//}
-
-exit:
-	if (ret != 0)
-		bc_cleansocket(&g_svr_bc.sockfd);
-	return ret;
-}
-
 
 
 static void _oriented_feedback(char* clientip)
@@ -100,7 +23,7 @@ static void _oriented_feedback(char* clientip)
 	int ret = 0;
 	// TODO: log client ip
 
-	if (!bc_checksocket(g_svr_feedback_sockfd))
+	if (!checksocket(g_svr_feedback_sockfd))
 	{
 		return; // TODO:
 	}
@@ -109,7 +32,7 @@ static void _oriented_feedback(char* clientip)
 	clientAddr.sin_port = htons(CLIENT_PORT);
 	inet_pton(AF_INET, clientip, &clientAddr.sin_addr);
 
-	make_discover_pkg(&pkg);
+	make_active_pkg(&pkg);
 	ret = sendto(g_svr_feedback_sockfd, (const char*)&pkg, sizeof(boardcast_package_t),
 				 0, (sockaddr*)&clientAddr, sizeof(clientAddr));
 	if (ret != sizeof(boardcast_package_t))
@@ -163,22 +86,6 @@ static void _svrbc_listen_thread(void* param)
 	return;
 }
 
-
-static int _create_svr_feedback_res()
-{
-	int ret = 0;
-
-	g_svr_feedback_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (!bc_checksocket(g_svr_feedback_sockfd))
-	{
-		return -1; // TODO:
-	}
-
-	return 0;
-}
-
-
-
 static void _boardcast_svr_msg(void* msg)
 {
 	int ret = 0;
@@ -190,7 +97,7 @@ static void _boardcast_svr_msg(void* msg)
 	server_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 	server_addr.sin_port = htons(CLIENT_PORT);
 
-	make_discover_pkg(&pkg);
+	make_active_pkg(&pkg);
 
 	while (1)
 	{
@@ -234,12 +141,19 @@ static void _boardcast_svr_msg(void* msg)
 
 static int _svr_listen_init()
 {
-	int ret = 0;
-
-	ret = _create_server_listen_res();
-	if (ret != 0)
+	g_svrbc_listen.sockfd = create_listen_udp_socket(SERVER_PORT);
+	if (g_svrbc_listen.sockfd == -1)
 	{
-		return ret;
+		return -1;
+	}
+
+	// 创建服务器定向反馈socket
+	g_svr_feedback_sockfd = create_udp_socket();
+	if (g_svr_feedback_sockfd == -1)
+	{
+		// TODO:
+		cleansocket(&g_svrbc_listen.sockfd);
+		return -1;
 	}
 
 	g_svrbc_listen.pause = true;
@@ -247,9 +161,6 @@ static int _svr_listen_init()
 	uv_cond_init(&g_svrbc_listen.cond);
 	uv_sem_init(&g_svrbc_listen.sem_exit, 1);
 	uv_sem_wait(&g_svrbc_listen.sem_exit);
-
-	// 创建服务器定向反馈socket
-	_create_svr_feedback_res();
 
 	uv_thread_create(&g_svrbc_listen.thread, _svrbc_listen_thread, NULL);
 
@@ -270,8 +181,8 @@ static int _svr_listen_uninit()
 	uv_cond_destroy(&g_svrbc_listen.cond);
 	uv_mutex_destroy(&g_svrbc_listen.mutex);
 	uv_sem_destroy(&g_svrbc_listen.sem_exit);
-	bc_cleansocket(&g_svrbc_listen.sockfd);
-	bc_cleansocket(&g_svr_feedback_sockfd);
+	cleansocket(&g_svrbc_listen.sockfd);
+	cleansocket(&g_svr_feedback_sockfd);
 	
 	return 0;
 }
@@ -280,12 +191,10 @@ static int _svr_listen_uninit()
 
 static int _svr_boardcast_init()
 {
-	int ret = 0;
-
-	ret = _create_svr_boardcast_socket();
-	if (ret != 0)
+	g_svr_bc.sockfd = create_boardcast_socket();
+	if (g_svr_bc.sockfd == -1)
 	{
-		return ret;
+		return -1;
 	}
 
 	uv_mutex_init(&g_svr_bc.mutex);
@@ -314,7 +223,7 @@ static int _svr_boardcast_uninit()
 	uv_sem_destroy(&g_svr_bc.sem_exit);
 	uv_cond_destroy(&g_svr_bc.cond);
 
-	bc_cleansocket(&g_svr_bc.sockfd);
+	cleansocket(&g_svr_bc.sockfd);
 
 	return 0;
 }
