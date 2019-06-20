@@ -8,6 +8,7 @@ include_directories(third/libuv/include)
 
 add_subdirectory(third/cb_sysinfo)
 add_subdirectory(third/libuv)
+add_subdirectory(bridge)
 add_subdirectory(AutoDiscover)
 add_subdirectory(third/cb_thread)
 add_subdirectory(test)

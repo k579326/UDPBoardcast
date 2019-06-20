@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "discover.h"
+#include "boardcast/boardcast_protocol.h"
 #include "boardcast/boardcast-mgr.h"
+#include "boardcast/boardcast-server.h"
 
 static int g_runType = NONE_RUN_TYPE;
 
@@ -13,14 +15,14 @@ int nd_set_running_type(int runType)
 	{
 		if (~runType & CLT_RUN_TYPE)
 		{
-			auto_sch_stop_client();
+			clt_model_stop();
 		}
 	}
 	else
 	{
 		if (runType & CLT_RUN_TYPE)
 		{
-			retc = auto_sch_runas_client();
+			retc = clt_model_start();
 		}
 	}
 
@@ -28,14 +30,14 @@ int nd_set_running_type(int runType)
 	{
 		if (~runType & SVR_RUN_TYPE)
 		{
-			auto_sch_stop_server();
+			svr_model_stop();
 		}
 	}
 	else
 	{
 		if (runType & SVR_RUN_TYPE)
 		{
-			rets = auto_sch_runas_server();
+			rets = svr_model_start();
 		}
 	}
 
@@ -66,14 +68,41 @@ int nd_add_oriented_server()
 
 int nd_boardcast_init()
 {
-	return auto_sch_init();
+	int rets = 0, retc = 0;
+	bool cErr = false, sErr = false;
+
+	retc = clt_model_init();
+	if (retc != 0)
+	{
+		goto exit;
+	}
+	rets = svr_model_init();
+	if (rets != 0)
+	{
+		goto exit;
+	}
+
+exit:
+	if (retc == 0 && rets == 0)
+	{
+		return 0;
+	}
+	else
+	{
+		retc == 0 ? clt_model_uninit() : NULL;
+		rets == 0 ? svr_model_uninit() : NULL;
+		return -1;
+	}
+
+	return 0;
 }
 
 
 int nd_boardcast_uninit()
 {
 	g_runType = NONE_RUN_TYPE;
-	auto_sch_uninit();
+	clt_model_uninit();
+	svr_model_uninit();
 	return 0;
 }
 

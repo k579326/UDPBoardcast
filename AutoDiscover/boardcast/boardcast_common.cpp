@@ -1,4 +1,6 @@
 
+#include "cb_sysinfo.h"
+#include "boardcast_protocol.h"
 #include "boardcast_common.h"
 #include "boardcast_define.h"
 
@@ -40,5 +42,32 @@ bool bc_checksocket(SOCKET sockfd)
 #else
 	return sockfd >= 0;
 #endif
+}
+
+
+system_info_t* systemInfo()
+{
+	char sysver[512] = { 0 };
+	char cptname[256] = { 0 };
+	int len = 256;
+	int bits = -1;
+	static bool binit = false;
+	static system_info_t g_sysinfo = { 0 };
+	
+	if (!binit)
+	{
+		cb_sysinfo_version(sysver, NULL);
+		strncpy(g_sysinfo.sysver, sysver, sizeof(g_sysinfo.sysver) - 1);
+
+		cb_sysinfo_computer_name(cptname, &len);
+		strncpy(g_sysinfo.cptname, cptname, sizeof(g_sysinfo.cptname) - 1);
+
+		cb_sysinfo_bits(&bits);
+		g_sysinfo.bits = (uint8_t)bits;
+
+		binit = true;
+	}
+
+	return &g_sysinfo;
 }
 

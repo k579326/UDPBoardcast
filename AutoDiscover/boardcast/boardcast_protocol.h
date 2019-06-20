@@ -40,9 +40,6 @@ typedef struct
 #pragma pack(pop)
 
 
-
-void sys_environment_init();
-
 void make_shutdown_pkg(boardcast_package_t* pkg);
 void make_discover_pkg(boardcast_package_t* pkg);
 

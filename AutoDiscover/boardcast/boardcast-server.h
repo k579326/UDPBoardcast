@@ -5,14 +5,14 @@
 #pragma once
 
 
-int svr_boardcast_init();
 
-int svr_boardcast_start();
+int svr_model_init();
 
-int svr_boardcast_stop();
+int svr_model_start();
 
-int svr_boardcast_uninit();
+int svr_model_stop();
 
-int svr_boardcast_isInited();
+int svr_model_uninit();
+
 
 

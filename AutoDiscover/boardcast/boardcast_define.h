@@ -4,7 +4,11 @@
 
 #pragma once
 
+#include "uv.h"
+
 #ifdef _WIN32
+#include <WS2tcpip.h>
+#include <winsock2.h>
 #include <Windows.h>
 #else
 #include <fcntl.h>
@@ -22,7 +26,15 @@
 #define SOCKET long long 
 #endif
 
-
+typedef struct
+{
+	bool pause;
+	SOCKET sockfd;
+	uv_thread_t thread;
+	uv_mutex_t mutex;
+	uv_cond_t cond;
+	uv_sem_t sem_exit;
+}boardcast_socket_t;
 
 
 
