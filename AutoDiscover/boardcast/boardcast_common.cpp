@@ -1,4 +1,5 @@
 
+#include <string.h>
 #include "cb_sysinfo.h"
 #include "boardcast_protocol.h"
 #include "boardcast_common.h"
