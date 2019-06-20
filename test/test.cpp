@@ -23,9 +23,9 @@ int main()
 	}
 
 	nd_set_running_type(MIX_RUN_TYPE);
-	//nd_set_running_type(MIX_RUN_TYPE);
-	//nd_set_running_type(SVR_RUN_TYPE);
-	//nd_set_running_type(SVR_RUN_TYPE);
+	nd_set_running_type(CLT_RUN_TYPE);
+	nd_set_running_type(SVR_RUN_TYPE);
+	nd_set_running_type(MIX_RUN_TYPE);
 
 	getchar();
 
