@@ -41,7 +41,7 @@ static SafeHostList g_server_list;
 
 int conn_add_client(char* ip)
 {
-	list<host_info_t>::const_iterator it;
+	list<host_info_t>::iterator it;
 	host_info_t host;
 	strcpy(host.ip, ip);
 
