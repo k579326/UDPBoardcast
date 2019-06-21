@@ -9,7 +9,7 @@
 #include "boardcast_protocol.h"
 #include "boardcast_common.h"
 #include "boardcast_define.h"
-#include "win/select_network.h"
+#include "boardcast_address/select_network.h"
 
 static socket_env_t g_cltbc_listen;		// 用于接收服务端广播
 static SOCKET g_clt_stutdown_socket = -1;		// 用于客户端停止是发送消息

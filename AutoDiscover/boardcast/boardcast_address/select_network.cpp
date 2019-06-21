@@ -209,7 +209,9 @@ unsigned long PhyBoardcastAddr()
 }
 
 #else
+
 #include <fcntl.h>
+#include <netinet/in.h>
 unsigned long PhyBoardcastAddr()
 {
 	return htonl(INADDR_BROADCAST);
