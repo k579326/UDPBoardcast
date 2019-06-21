@@ -9,7 +9,7 @@
 #include "boardcast_protocol.h"
 #include "boardcast_common.h"
 #include "boardcast_define.h"
-
+#include "win/select_network.h"
 
 static socket_env_t g_cltbc_listen;		// 用于接收服务端广播
 static SOCKET g_clt_stutdown_socket = -1;		// 用于客户端停止是发送消息
@@ -27,7 +27,6 @@ static void _cltbc_listen_thread(void* param)
 	{
 		if (0 == uv_sem_trywait(&g_cltbc_listen.sem_exit))
 		{
-			// TODO:
 			break;
 		}
 
@@ -51,9 +50,14 @@ static void _cltbc_listen_thread(void* param)
 			printf("[boardcast from server]: %s, msg_type: %d\n", (char*)pkg.sys_info.cptname, pkg.msg_type);
 		}
 
+		if (uv_sem_trywait(&g_cltbc_listen.sem_exit) == 0)
+		{// 增加一处退出信号捕获，降低程序退出时等待几率
+			break;
+		}
 		CB_THREAD_SLEEP_MS(200);
 	}
 	
+	// TODO: exit log
 	return;
 }
 
@@ -66,7 +70,7 @@ static int _client_startup_boardcast()
 	sockaddr_in server_addr;
 
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+	server_addr.sin_addr.s_addr = htonl(PhyBoardcastAddr());
 	server_addr.sin_port = htons(SERVER_PORT);
 
 	make_active_pkg(&pkg);

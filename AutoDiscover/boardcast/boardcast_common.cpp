@@ -111,6 +111,29 @@ SOCKET create_udp_socket()
 
 
 
+#ifdef _WIN32
+
+unsigned long get_boardcast_addr()
+{
+	return 0;
+}
+
+#else
+
+unsigned long get_boardcast_addr()
+{
+	return INADDR_BROADCAST;
+}
+
+#endif
+
+
+
+
+
+
+
+
 system_info_t* systemInfo()
 {
 	char sysver[512] = { 0 };

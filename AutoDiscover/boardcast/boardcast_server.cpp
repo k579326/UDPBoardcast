@@ -7,7 +7,10 @@
 #include "boardcast_common.h"
 
 #include "uv.h"
+
+#include "win/select_network.h"
 #include "boardcast_define.h"
+
 
 
 static socket_env_t g_svr_bc;			// 用于服务器广播
@@ -55,7 +58,6 @@ static void _svrbc_listen_thread(void* param)
 	{
 		if (0 == uv_sem_trywait(&g_svrbc_listen.sem_exit))
 		{
-			// TODO:
 			break;
 		}
 
@@ -80,8 +82,14 @@ static void _svrbc_listen_thread(void* param)
 			_oriented_feedback(inet_ntoa(peerAddr.sin_addr));
 		}
 
+		if (uv_sem_trywait(&g_svrbc_listen.sem_exit) == 0)
+		{// 增加一处退出信号捕获，降低程序退出时等待几率
+			break;
+		}
 		CB_THREAD_SLEEP_MS(200);
 	}
+
+	// TODO: exit log
 
 	return;
 }
@@ -94,7 +102,7 @@ static void _boardcast_svr_msg(void* msg)
 
 	sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+	server_addr.sin_addr.s_addr = htonl(PhyBoardcastAddr());
 	server_addr.sin_port = htons(CLIENT_PORT);
 
 	make_active_pkg(&pkg);
@@ -103,7 +111,6 @@ static void _boardcast_svr_msg(void* msg)
 	{
 		if (uv_sem_trywait(&g_svr_bc.sem_exit) == 0)
 		{
-			// TODO:
 			break;
 		}
 
@@ -132,10 +139,15 @@ static void _boardcast_svr_msg(void* msg)
 			printf("[Server Boardcast] error, send %d bytes!\n", ret);
 		}
 
+		if (uv_sem_trywait(&g_svr_bc.sem_exit) == 0)
+		{// 增加一处退出信号捕获，降低程序退出时等待几率
+			break;
+		}
 		CB_THREAD_SLEEP_MS(SVR_BOARDCAST_TIMESPACE);
 	}
 
-	
+	// TODO: exit log
+
 	return;
 }
 
