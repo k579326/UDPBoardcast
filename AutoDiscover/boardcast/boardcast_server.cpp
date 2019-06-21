@@ -102,7 +102,7 @@ static void _boardcast_svr_msg(void* msg)
 
 	sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = htonl(PhyBoardcastAddr());
+	server_addr.sin_addr.s_addr = PhyBoardcastAddr();
 	server_addr.sin_port = htons(CLIENT_PORT);
 
 	make_active_pkg(&pkg);

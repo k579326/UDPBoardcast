@@ -70,7 +70,7 @@ static int _client_startup_boardcast()
 	sockaddr_in server_addr;
 
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = htonl(PhyBoardcastAddr());
+	server_addr.sin_addr.s_addr = PhyBoardcastAddr();
 	server_addr.sin_port = htons(SERVER_PORT);
 
 	make_active_pkg(&pkg);

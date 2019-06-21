@@ -2,10 +2,13 @@
 
 #include "select_network.h"
 #include <vector>
+#include <string>
 #include <string.h>
 #include <stdio.h>
 #include <algorithm>
 
+
+#ifdef _WIN32
 #include <WS2tcpip.h>
 #include <Windows.h>
 #include <iphlpapi.h>
@@ -159,8 +162,6 @@ static unsigned long _select(std::vector<network_t>& nwList)
 }
 
 
-
-
 unsigned long PhyBoardcastAddr()
 {
 	ULONG boardcastaddr = INADDR_BROADCAST;
@@ -173,8 +174,6 @@ unsigned long PhyBoardcastAddr()
 
 	pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
 	
-	// Make an initial call to GetAdaptersInfo to get
-	// the necessary size into the ulOutBufLen variable
 	if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW)
 	{
 		free(pAdapterInfo);
@@ -197,6 +196,10 @@ unsigned long PhyBoardcastAddr()
 		}
 
 		boardcastaddr = _select(nwList);
+
+		char ipbf[64];
+		inet_ntop(AF_INET, &boardcastaddr, ipbf, 64);
+		printf("[select boardcast address] %s\n", ipbf);
 	}
 
 	if (pAdapterInfo)
@@ -204,3 +207,14 @@ unsigned long PhyBoardcastAddr()
 
 	return boardcastaddr;
 }
+
+#else
+#include <fcntl.h>
+unsigned long PhyBoardcastAddr()
+{
+	return htonl(INADDR_BROADCAST);
+}
+
+#endif
+
+
