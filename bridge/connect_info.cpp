@@ -41,7 +41,7 @@ static SafeHostList g_server_list;
 
 int conn_add_client(char* ip)
 {
-	list<host_info_t>::iterator it;
+	list<host_info_t>::const_iterator it;
 	host_info_t host;
 	strcpy(host.ip, ip);
 
@@ -94,7 +94,7 @@ int conn_add_server(char* ip)
 }
 int conn_del_server(char* ip)
 {
-	list<host_info_t>::const_iterator it;
+	list<host_info_t>::iterator it;
 	g_server_list.lock();
 	for (; it != g_server_list.hostList_.end(); )
 	{
