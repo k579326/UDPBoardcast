@@ -14,13 +14,13 @@
 #include <iphlpapi.h>
 
 
-// ÏÂÃæµÄÖµÊÇWindowsµÄ¶¨Òå£¬µ«ÊÇÕÒ²»µ½ÕâĞ©¶¨ÒåËùÔÚµÄÍ·ÎÄ¼ş¡£²»¿ÉËæÒâ¸ü¸ÄÕâĞ©Öµ
+// ä¸‹é¢çš„å€¼æ˜¯Windowsçš„å®šä¹‰ï¼Œä½†æ˜¯æ‰¾ä¸åˆ°è¿™äº›å®šä¹‰æ‰€åœ¨çš„å¤´æ–‡ä»¶ã€‚ä¸å¯éšæ„æ›´æ”¹è¿™äº›å€¼
 
-#define NCF_VIRTUAL				0x01			// ÊÇ·ñĞéÄâÍø¿¨
+#define NCF_VIRTUAL				0x01			// æ˜¯å¦è™šæ‹Ÿç½‘å¡
 #define NCF_SOFTWARE_ENUMERATED 0x02
-#define NCF_PHYSICAL			0x04			// ÊÇ·ñÎïÀíÍø¿¨
+#define NCF_PHYSICAL			0x04			// æ˜¯å¦ç‰©ç†ç½‘å¡
 #define NCF_HIDDEN				0x08
-#define NCF_NO_SERVICE			0x10			// ¸ÃÉè±¸ÎŞÇı¶¯
+#define NCF_NO_SERVICE			0x10			// è¯¥è®¾å¤‡æ— é©±åŠ¨
 #define NCF_NOT_USER_REMOVABLE	0x20
 #define NCF_HAS_UI				0x80
 #define NCF_FILTER				0x400	
@@ -129,7 +129,7 @@ static unsigned long _select(std::vector<network_t>& nwList)
 
 	ncList = _readRegInfoForNetCard();
 
-	DWORD max;		// NCF_PHYSICAL > NCF_VIRTUAL, ËùÒÔÕÒ×î´óµÄ
+	DWORD max;		// NCF_PHYSICAL > NCF_VIRTUAL, æ‰€ä»¥æ‰¾æœ€å¤§çš„
 
 	for (std::vector<netcard_t>::iterator it = ncList.begin(); it != ncList.end(); )
 	{
