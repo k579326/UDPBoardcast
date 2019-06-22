@@ -114,7 +114,7 @@ static void _svrbc_listen_thread(void* param)
 		{// 增加一处退出信号捕获，降低程序退出时等待几率
 			break;
 		}
-		CB_THREAD_SLEEP_MS(200);
+		CB_THREAD_SLEEP_MS(SVR_BC_LISTEN_TIMESPACE);
 	}
 
 	// TODO: exit log
@@ -133,8 +133,6 @@ static void _boardcast_svr_msg(void* msg)
 	server_addr.sin_addr.s_addr = PhyBoardcastAddr();
     //server_addr.sin_addr.s_addr = INADDR_BROADCAST;
     server_addr.sin_port = htons(CLIENT_PORT);
-
-	
 
 	while (1)
 	{
@@ -249,7 +247,7 @@ static int _svr_boardcast_uninit()
 	uv_sem_post(&g_svr_bc.sem_exit);
 	uv_cond_signal(&g_svr_bc.cond);
 
-	uv_thread_join(&g_svr_bc.thread);
+	//uv_thread_join(&g_svr_bc.thread);
 
 	uv_mutex_destroy(&g_svr_bc.mutex);
 	uv_sem_destroy(&g_svr_bc.sem_exit);

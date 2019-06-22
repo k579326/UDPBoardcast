@@ -101,7 +101,7 @@ static void _cltbc_listen_thread(void* param)
             }
 		}
 
-		CB_THREAD_SLEEP_MS(200);
+		CB_THREAD_SLEEP_MS(CLT_BC_LISTEN_TIMESPACE);
 	}
 	
 	// TODO: exit log
@@ -131,6 +131,36 @@ static int _client_startup_boardcast()
 
 	return ret;
 }
+
+static void _client_shutdown_oriented_notify()
+{
+    std::vector<peer_info_t> svrList = SafeSvrList::getInstance()->clr();
+
+    for (std::vector<peer_info_t>::const_iterator it = svrList.begin();
+         it != svrList.end(); it++)
+    {
+        int ret = 0;
+        boardcast_package_t pkg;
+        sockaddr_in server_addr;
+        
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_addr = StringToNetIp(it->ip.c_str());
+        server_addr.sin_port = htons(SERVER_PORT);
+
+        make_shutdown_pkg(&pkg);
+
+        ret = sendto(g_clt_startup_socket, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
+        if (ret != sizeof(boardcast_package_t))
+        {
+            printf("[Client Oriented] client send close to %s failed!\n", it->ip.c_str());
+        }
+        else
+        {
+            printf("[Client Oriented] client send close to %s success!\n", it->ip.c_str());
+        }
+    }
+}
+
 
 
 int clt_model_init()
@@ -188,7 +218,6 @@ int clt_model_start()
 	uv_cond_signal(&g_cltbc_listen.cond);
 
 	ret = _client_startup_boardcast();
-	// TODO: 不强制要求成功，如果失败，输出日志
 
 	return 0;
 }
@@ -199,8 +228,7 @@ int clt_model_stop()
 	g_cltbc_listen.pause = true;
 	uv_mutex_unlock(&g_cltbc_listen.mutex);
 
-	//ret = _client_do_boardcast(true);
-	// TODO: 不强制要求成功，如果失败，输出日志
+	_client_shutdown_oriented_notify();
 
 	return 0;
 }
@@ -221,6 +249,8 @@ int clt_model_uninit()
 	uv_sem_destroy(&g_cltbc_listen.sem_exit);
 
 	cleansocket(&g_cltbc_listen.sockfd);
+    cleansocket(&g_clt_startup_socket);
+    cleansocket(&g_clt_stutdown_socket);
 
 	return 0;
 }

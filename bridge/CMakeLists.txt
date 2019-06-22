@@ -1,5 +1,5 @@
 
 
 
-add_library(bridge STATIC connect_info.cpp connect_info.h)
+add_library(bridge STATIC connreq_mgr.cpp connreq_mgr.h)
 
