@@ -7,10 +7,9 @@
 #include <stdio.h>
 #include <algorithm>
 
+#include "sysheader.h"
 
 #ifdef _WIN32
-#include <WS2tcpip.h>
-#include <Windows.h>
 #include <iphlpapi.h>
 
 

@@ -3,7 +3,6 @@
 #include "cb_sysinfo.h"
 #include "boardcast_protocol.h"
 #include "boardcast_common.h"
-#include "boardcast_define.h"
 
 int setnonblock(SOCKET sockfd)
 {
@@ -43,6 +42,22 @@ bool checksocket(SOCKET sockfd)
 #else
 	return sockfd >= 0;
 #endif
+}
+
+// 参数 ip: 网络序
+std::string NetIpToString(in_addr ip)
+{
+	char ipstring[64];
+	inet_ntop(AF_INET, &ip, ipstring, 64);
+	return ipstring;
+}
+
+// 返回值： 网络序
+in_addr StringToNetIp(const char* ip)
+{
+	in_addr addr;
+	inet_pton(AF_INET, ip, &addr);
+	return addr;
 }
 
 
@@ -108,30 +123,6 @@ SOCKET create_udp_socket()
 	}
 	return skfd;
 }
-
-
-
-#ifdef _WIN32
-
-unsigned long get_boardcast_addr()
-{
-	return 0;
-}
-
-#else
-
-unsigned long get_boardcast_addr()
-{
-	return INADDR_BROADCAST;
-}
-
-#endif
-
-
-
-
-
-
 
 
 system_info_t* systemInfo()

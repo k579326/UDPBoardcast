@@ -10,18 +10,32 @@ void make_shutdown_pkg(boardcast_package_t* pkg)
 {
 	pkg->version = BOARDCAST_PROTOCAL_VERSION;
 	pkg->magic = BOARDCAST_MAGIC_NUM;
+	pkg->port = 10040;
 
 	memcpy(&pkg->sys_info, systemInfo(), sizeof(system_info_t));
 
 	pkg->msg_type = BOARDCAST_MSG_SHUTDOWN;
 	return;
 }
-void make_active_pkg(boardcast_package_t* pkg)
+void make_startup_pkg(boardcast_package_t* pkg)
 {
 	pkg->version = BOARDCAST_PROTOCAL_VERSION;
 	pkg->magic = BOARDCAST_MAGIC_NUM;
+	pkg->port = 10040;
+
 	memcpy(&pkg->sys_info, systemInfo(), sizeof(system_info_t));
 
 	pkg->msg_type = BOARDCAST_MSG_STARTUP;
 	return;
+}
+void make_keepalive_pkg(boardcast_package_t* pkg)
+{
+    pkg->version = BOARDCAST_PROTOCAL_VERSION;
+    pkg->magic = BOARDCAST_MAGIC_NUM;
+    pkg->port = 10040;
+
+    memcpy(&pkg->sys_info, systemInfo(), sizeof(system_info_t));
+
+    pkg->msg_type = BOARDCAST_MSG_KEEPALIVE;
+    return;
 }

@@ -5,16 +5,11 @@
 
 #include <stdint.h>
 #include "boardcast_define.h"
-
+#include "ssnet_define.h"
 
 #define BOARDCAST_PROTOCAL_VERSION 1
 
 #define BOARDCAST_MAGIC_NUM 0x94623744
-
-// 广播消息类型
-#define BOARDCAST_MSG_STARTUP		1
-#define BOARDCAST_MSG_SHUTDOWN		2
-
 
 
 #pragma pack(push, 1)
@@ -33,6 +28,7 @@ typedef struct
 {
 	uint8_t version;
 	uint32_t magic;
+	uint16_t port;				// 指定自己监听的tcp端口，服务模式广播消息有效
 	system_info_t sys_info;
 	uint8_t msg_type;			// 广播消息类型 BOARDCAST_MSG_STARTUP or BOARDCAST_MSG_SHUTDOWN
 }boardcast_package_t;
@@ -41,7 +37,7 @@ typedef struct
 
 
 void make_shutdown_pkg(boardcast_package_t* pkg);
-void make_active_pkg(boardcast_package_t* pkg);
-
+void make_startup_pkg(boardcast_package_t* pkg);
+void make_keepalive_pkg(boardcast_package_t* pkg);
 
 

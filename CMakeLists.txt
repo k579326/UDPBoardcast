@@ -1,6 +1,7 @@
 
 cmake_minimum_required(VERSION 3.0)
 
+include_directories(include)
 include_directories(third/cb_sysinfo/inc)
 include_directories(third/cb_thread/inc)
 include_directories(third/libuv/include)

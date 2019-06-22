@@ -10,10 +10,54 @@
 #include "boardcast_common.h"
 #include "boardcast_define.h"
 #include "boardcast_address/select_network.h"
+#include "boardcast_cache.h"
 
 static socket_env_t g_cltbc_listen;		// 用于接收服务端广播
 static SOCKET g_clt_stutdown_socket = -1;		// 用于客户端停止是发送消息
 static SOCKET g_clt_startup_socket = -1;
+
+
+
+static void _oriented_feedback_alive(const std::string& ip)
+{
+    int ret = 0;
+    boardcast_package_t pkg;
+    sockaddr_in server_addr;
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr = StringToNetIp(ip.c_str());
+    server_addr.sin_port = htons(SERVER_PORT);
+
+    make_keepalive_pkg(&pkg);
+
+    ret = sendto(g_cltbc_listen.sockfd, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
+    if (ret != sizeof(boardcast_package_t))
+    {
+        printf("[Client Alive] send keepalive msg failed!\n");
+    }
+    else
+    {
+        printf("[Client Alive] feedback to %s success!\n", ip.c_str());
+    }
+    return;
+}
+
+
+static void _handle_boardcast_msg(int msg_type, const peer_info_t& peer)
+{
+	if (msg_type == BOARDCAST_MSG_STARTUP)
+	{
+		SafeSvrList::getInstance()->add(peer);
+        _oriented_feedback_alive(peer.ip);
+	}
+	else if (msg_type == BOARDCAST_MSG_SHUTDOWN)
+	{
+        SafeSvrList::getInstance()->del(peer);
+	}
+    return;
+}
+
+
 
 static void _cltbc_listen_thread(void* param)
 {
@@ -43,17 +87,20 @@ static void _cltbc_listen_thread(void* param)
 
 		if (ret != buflen)
 		{
-			// printf("[Client BC Listen] error, send %d bytes!\n", ret);
+			// printf("[Client BC Listen] error, send %d bytes!\n", GetLastError());
 		}
 		else
 		{
-			printf("[boardcast from server]: %s, msg_type: %d\n", (char*)pkg.sys_info.cptname, pkg.msg_type);
+			peer_info_t peer;
+			peer.ip = NetIpToString(peerAddr.sin_addr);
+			peer.port = pkg.port;
+            // 过滤无关广播
+            if (pkg.magic == BOARDCAST_MAGIC_NUM)
+            {
+                _handle_boardcast_msg(pkg.msg_type, peer);
+            }
 		}
 
-		if (uv_sem_trywait(&g_cltbc_listen.sem_exit) == 0)
-		{// 增加一处退出信号捕获，降低程序退出时等待几率
-			break;
-		}
 		CB_THREAD_SLEEP_MS(200);
 	}
 	
@@ -73,7 +120,7 @@ static int _client_startup_boardcast()
 	server_addr.sin_addr.s_addr = PhyBoardcastAddr();
 	server_addr.sin_port = htons(SERVER_PORT);
 
-	make_active_pkg(&pkg);
+    make_startup_pkg(&pkg);
 
 	ret = sendto(g_clt_startup_socket, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
 	if (ret != sizeof(boardcast_package_t))

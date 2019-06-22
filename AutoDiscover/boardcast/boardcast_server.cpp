@@ -6,11 +6,9 @@
 #include "boardcast_protocol.h"
 #include "boardcast_common.h"
 
-#include "uv.h"
-
 #include "boardcast_address/select_network.h"
 #include "boardcast_define.h"
-
+#include "boardcast_cache.h"
 
 
 static socket_env_t g_svr_bc;			// 用于服务器广播
@@ -19,7 +17,7 @@ static socket_env_t g_svrbc_listen;		// 用于接收客户端广播
 static SOCKET g_svr_feedback_sockfd = -1;	// 定向反馈socket
 
 
-static void _oriented_feedback(char* clientip)
+static void _oriented_feedback(const char* clientip)
 {
 	boardcast_package_t pkg;
 	sockaddr_in clientAddr;
@@ -35,7 +33,7 @@ static void _oriented_feedback(char* clientip)
 	clientAddr.sin_port = htons(CLIENT_PORT);
 	inet_pton(AF_INET, clientip, &clientAddr.sin_addr);
 
-	make_active_pkg(&pkg);
+	make_startup_pkg(&pkg);
 	ret = sendto(g_svr_feedback_sockfd, (const char*)&pkg, sizeof(boardcast_package_t),
 				 0, (sockaddr*)&clientAddr, sizeof(clientAddr));
 	if (ret != sizeof(boardcast_package_t))
@@ -45,6 +43,26 @@ static void _oriented_feedback(char* clientip)
 
 	return;
 }
+
+static void _handle_boardcast_msg(int msg_type, const peer_info_t& peer)
+{
+    if (msg_type == BOARDCAST_MSG_STARTUP)
+    {
+        _oriented_feedback(peer.ip.c_str());
+        SafeCltList::getInstance()->add(peer.ip);
+    }
+    else if (msg_type == BOARDCAST_MSG_SHUTDOWN)
+    {
+        SafeCltList::getInstance()->del(peer.ip);
+    }
+    else if (msg_type == BOARDCAST_MSG_KEEPALIVE)
+    {
+        SafeCltList::getInstance()->add(peer.ip);
+    }
+    return;
+}
+
+
 
 static void _svrbc_listen_thread(void* param)
 {
@@ -78,9 +96,19 @@ static void _svrbc_listen_thread(void* param)
 		}
 		else
 		{
-			printf("[boardcast from client]: %s, msg_type: %d\n", (char*)pkg.sys_info.cptname, pkg.msg_type);
-			_oriented_feedback(inet_ntoa(peerAddr.sin_addr));
+            peer_info_t peer;
+            peer.ip = NetIpToString(peerAddr.sin_addr);
+            peer.port = pkg.port;
+
+            // 过滤无关广播
+            if (pkg.magic == BOARDCAST_MAGIC_NUM)
+            {
+                _handle_boardcast_msg(pkg.msg_type, peer);
+            }
 		}
+
+        // 刷新keepalive时间
+        SafeCltList::getInstance()->RefreshAliveTime();
 
 		if (uv_sem_trywait(&g_svrbc_listen.sem_exit) == 0)
 		{// 增加一处退出信号捕获，降低程序退出时等待几率
@@ -103,9 +131,10 @@ static void _boardcast_svr_msg(void* msg)
 	sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = PhyBoardcastAddr();
-	server_addr.sin_port = htons(CLIENT_PORT);
+    //server_addr.sin_addr.s_addr = INADDR_BROADCAST;
+    server_addr.sin_port = htons(CLIENT_PORT);
 
-	make_active_pkg(&pkg);
+	
 
 	while (1)
 	{
@@ -113,22 +142,13 @@ static void _boardcast_svr_msg(void* msg)
 		{
 			break;
 		}
+        make_startup_pkg(&pkg);
 
 		uv_mutex_lock(&g_svr_bc.mutex);
 		if (g_svr_bc.pause)
 		{
 			// 停止前广播一次服务模式关闭
 			make_shutdown_pkg(&pkg);
-			ret = sendto(g_svr_bc.sockfd, (char*)& pkg, sizeof(boardcast_package_t), 0, (sockaddr*)& server_addr, sizeof(server_addr));
-			if (ret != sizeof(boardcast_package_t))
-			{
-				printf("[Server Boardcast] error, send %d bytes!\n", ret);
-			}
-			else
-			{
-				printf("[Server Boardcast] server %s close!\n", pkg.sys_info.cptname);
-			}
-
 			uv_cond_wait(&g_svr_bc.cond, &g_svr_bc.mutex);
 		}
 		uv_mutex_unlock(&g_svr_bc.mutex);
@@ -136,7 +156,7 @@ static void _boardcast_svr_msg(void* msg)
 		if (ret != sizeof(boardcast_package_t))
 		{
 			// TODO:
-			printf("[Server Boardcast] error, send %d bytes!\n", ret);
+			// printf("[Server Boardcast] success, send %d bytes!\n", ret);
 		}
 
 		if (uv_sem_trywait(&g_svr_bc.sem_exit) == 0)

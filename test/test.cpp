@@ -14,7 +14,7 @@ int main()
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 #endif
-	
+
 	int ret = nd_boardcast_init();
 	if (ret != 0)
 	{
