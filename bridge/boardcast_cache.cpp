@@ -170,7 +170,7 @@ std::vector<CLIENTIP> SafeCltList::clr()
          it != hostList_.end(); )
     {
         lst.push_back(it->first);
-        it = hostList_.erase(it);
+        hostList_.erase(it++);
     }
 
     clean_cltchange_msg();
