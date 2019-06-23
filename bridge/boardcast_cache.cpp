@@ -105,6 +105,11 @@ void SafeCltList::_keepalive(void* param)
             }
         }
         scl->unlock();
+
+        if (uv_sem_trywait(&scl->semExit_) == 0)
+        {
+            break;
+        }
     }
 
     return;

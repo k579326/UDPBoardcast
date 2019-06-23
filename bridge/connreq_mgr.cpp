@@ -15,11 +15,19 @@ public:
     {
         uv_mutex_init(&mutex_);
         uv_cond_init(&cond_);
+        uv_sem_init(&semExit_, 1);
+        uv_sem_wait(&semExit_);
+
         cb_ = NULL;
 
         uv_thread_create(&thread_, req_handle, this);
     }
-    ~HostChangeReq(){ 
+    ~HostChangeReq(){
+
+        uv_sem_post(&semExit_);
+        uv_cond_signal(&cond_);
+        uv_thread_join(&thread_);
+
         uv_mutex_destroy(&mutex_);
         uv_cond_destroy(&cond_);
         cb_ = NULL;
@@ -62,6 +70,7 @@ private:
     uv_thread_t thread_;
     uv_mutex_t mutex_;
     uv_cond_t cond_;
+    uv_sem_t semExit_;
     HOST_CHANGE_CB cb_;
 };
 
@@ -73,7 +82,7 @@ void HostChangeReq::addmsg(conn_req_t req)
     std::list<conn_req_t>::iterator it;
     for (it = reqs.begin(); it != reqs.end(); it++)
     {
-        // ÕâÀï²»¼ì²é¶Ë¿Ú£¬¿Í»§¶Ë±ä¶¯µÄÏûÏ¢À´µÄÊ±ºòÃ»ÓĞ´ø¶Ë¿Ú¡£ÕâÑùµÄ»°¾Í²»Ö§³Ö·şÎñ¶Ë¿ªÁ½¸ö²»Í¬¶Ë¿ÚÀ´Í¨ĞÅ
+        // è¿™é‡Œä¸æ£€æŸ¥ç«¯å£ï¼Œå®¢æˆ·ç«¯å˜åŠ¨çš„æ¶ˆæ¯æ¥çš„æ—¶å€™æ²¡æœ‰å¸¦ç«¯å£ã€‚è¿™æ ·çš„è¯å°±ä¸æ”¯æŒæœåŠ¡ç«¯å¼€ä¸¤ä¸ªä¸åŒç«¯å£æ¥é€šä¿¡
         if (it->req_type == req.req_type && it->info.ip == it->info.ip)
         {
             break;
@@ -91,6 +100,10 @@ void HostChangeReq::req_handle(void* thread_param)
 
     while (1)
     {
+        if (uv_sem_trywait(&reqObj->semExit_) == 0)
+        {
+            break;
+        }
         reqObj->lock();
 
         conn_req_t cr;
@@ -104,6 +117,7 @@ void HostChangeReq::req_handle(void* thread_param)
         it = reqObj->reqs.begin();
         if (it == reqObj->reqs.end())
         {
+            reqObj->unlock();
             continue;
         }
         cr = *it;
@@ -119,17 +133,17 @@ void HostChangeReq::req_handle(void* thread_param)
 }
 
 
-static HostChangeReq g_clientReqHandler;            // ´¦Àí·¢ÏÖÔ¶³Ì¿Í»§¶ËµÄÏûÏ¢
-static HostChangeReq g_serverReqHandler;            // ´¦Àí·¢ÏÖÔ¶³Ì·şÎñ¶ËµÄÏûÏ¢
+static HostChangeReq g_clientReqHandler;            // å¤„ç†å‘ç°è¿œç¨‹å®¢æˆ·ç«¯çš„æ¶ˆæ¯
+static HostChangeReq g_serverReqHandler;            // å¤„ç†å‘ç°è¿œç¨‹æœåŠ¡ç«¯çš„æ¶ˆæ¯
 
 
-// Ô¶¶Ë¿Í»§¶Ë¶Ï¿ªµÄ»Øµ÷
+// è¿œç«¯å®¢æˆ·ç«¯æ–­å¼€çš„å›è°ƒ
 void RegisterClientDisconnectCallback(HOST_CHANGE_CB cb)
 {
     g_clientReqHandler.SetCallBack(cb);
 }
 
-// ·¢ÏÖºÍ¶ªÊ§Ô¶¶Ë·şÎñÆ÷µÄ»Øµ÷
+// å‘ç°å’Œä¸¢å¤±è¿œç«¯æœåŠ¡å™¨çš„å›è°ƒ
 void RegisterServerChangeCallback(HOST_CHANGE_CB cb)
 {
     g_serverReqHandler.SetCallBack(cb);

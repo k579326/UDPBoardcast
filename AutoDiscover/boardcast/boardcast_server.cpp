@@ -248,7 +248,7 @@ static int _svr_boardcast_uninit()
 	uv_sem_post(&g_svr_bc.sem_exit);
 	uv_cond_signal(&g_svr_bc.cond);
 
-	uv_thread_join(&g_svr_bc.thread);
+	// uv_thread_join(&g_svr_bc.thread); 不等待子线程，可能发生崩溃
 
 	uv_mutex_destroy(&g_svr_bc.mutex);
 	uv_sem_destroy(&g_svr_bc.sem_exit);

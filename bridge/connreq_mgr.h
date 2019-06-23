@@ -20,13 +20,13 @@ typedef struct
 }conn_req_t;
 
 
-// ¸Ã»Øµ÷º¯ÊıÄÚ²¿²»¿É×èÈû£¬²»½¨ÒéÓĞºÄÊ±Ì«¶àµÄ¹¦ÄÜ
+// è¯¥å›è°ƒå‡½æ•°å†…éƒ¨ä¸å¯é˜»å¡ï¼Œä¸å»ºè®®æœ‰è€—æ—¶å¤ªå¤šçš„åŠŸèƒ½
 typedef void (*HOST_CHANGE_CB)(const conn_req_t* req);
 
-// Ô¶¶Ë¿Í»§¶Ë¶Ï¿ªµÄ»Øµ÷
+// è¿œç«¯å®¢æˆ·ç«¯æ–­å¼€çš„å›è°ƒ
 void RegisterClientDisconnectCallback(HOST_CHANGE_CB cb);
 
-// ·¢ÏÖºÍ¶ªÊ§Ô¶¶Ë·şÎñÆ÷µÄ»Øµ÷
+// å‘ç°å’Œä¸¢å¤±è¿œç«¯æœåŠ¡å™¨çš„å›è°ƒ
 void RegisterServerChangeCallback(HOST_CHANGE_CB cb);
 
 

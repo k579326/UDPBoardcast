@@ -51,11 +51,17 @@ private:
 	{
 		uv_mutex_init(&mutex_);
         uv_cond_init(&cond_);
+        uv_sem_init(&semExit_, 1);
+        uv_sem_wait(&semExit_);
 
         uv_thread_create(&thread_, _keepalive, this);
 	}
 	~SafeCltList()
 	{
+        uv_sem_post(&semExit_);
+        uv_cond_signal(&cond_);
+        uv_thread_join(&thread_);
+
         uv_cond_destroy(&cond_);
 		uv_mutex_destroy(&mutex_);
 	}
@@ -76,6 +82,7 @@ private:
     uv_thread_t thread_;
 	uv_mutex_t mutex_;
     uv_cond_t cond_;
+    uv_sem_t semExit_;
 public:
 
     bool add(const CLIENTIP& ip);
