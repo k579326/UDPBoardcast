@@ -166,7 +166,7 @@ std::vector<CLIENTIP> SafeCltList::clr()
 
     lock();
     
-    for (std::map<CLIENTIP, int>::const_iterator it = hostList_.begin();
+    for (std::map<CLIENTIP, int>::iterator it = hostList_.begin();
          it != hostList_.end(); )
     {
         lst.push_back(it->first);
