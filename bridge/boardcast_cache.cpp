@@ -44,7 +44,7 @@ bool SafeSvrList::add(const peer_info_t& peer)
 
 bool SafeSvrList::del(const peer_info_t& peer)
 {
-	std::vector<peer_info_t>::const_iterator it;
+	std::vector<peer_info_t>::iterator it;
 	peer_compare CMP;
 
 	lock();
@@ -91,12 +91,12 @@ void SafeCltList::_keepalive(void* param)
         {
             it->second += SVR_BC_LISTEN_TIMESPACE;
             if (it->second > SVR_KEEPALIVE_TIMEOUT)
-            {// ³¬Ê±
+            {// è¶…æ—¶
                 peer_info_t peer;
                 peer.ip = it->first;
                 peer.port = 0;
 
-                it = scl->hostList_.erase(it);
+                scl->hostList_.erase(it++);
                 deliver_cltchange_msg(REQ_Del, &peer);
             }
             else
@@ -125,7 +125,7 @@ bool SafeCltList::add(const CLIENTIP& ip)
     it = hostList_.find(ip);
     if (it == hostList_.end())
     {
-        hostList_[ip] = -SVR_BC_LISTEN_TIMESPACE; // ²åÈëĞÂµÄ¿Í»§¶Ë£¬keepalive¶¨Îª¸º¼ä¸ô
+        hostList_[ip] = -SVR_BC_LISTEN_TIMESPACE; // æ’å…¥æ–°çš„å®¢æˆ·ç«¯ï¼Œkeepaliveå®šä¸ºè´Ÿé—´éš”
 
         peer_info_t peer;
         peer.ip = ip;
@@ -134,7 +134,7 @@ bool SafeCltList::add(const CLIENTIP& ip)
     }
     else
     {
-        it->second = -SVR_BC_LISTEN_TIMESPACE; // ÖØÖÃkeepaliveÊ±¼ä
+        it->second = -SVR_BC_LISTEN_TIMESPACE; // é‡ç½®keepaliveæ—¶é—´
     }
     unlock();
 
