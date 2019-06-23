@@ -147,7 +147,7 @@ static void _boardcast_svr_msg(void* msg)
 		if (g_svr_bc.pause)
 		{
 			// 停止前广播一次服务模式关闭
-			make_shutdown_pkg(&pkg);
+			// make_shutdown_pkg(&pkg);
 			uv_cond_wait(&g_svr_bc.cond, &g_svr_bc.mutex);
 		}
 		uv_mutex_unlock(&g_svr_bc.mutex);
@@ -248,7 +248,7 @@ static int _svr_boardcast_uninit()
 	uv_sem_post(&g_svr_bc.sem_exit);
 	uv_cond_signal(&g_svr_bc.cond);
 
-	//uv_thread_join(&g_svr_bc.thread);
+	uv_thread_join(&g_svr_bc.thread);
 
 	uv_mutex_destroy(&g_svr_bc.mutex);
 	uv_sem_destroy(&g_svr_bc.sem_exit);
@@ -350,6 +350,8 @@ int svr_model_stop()
 {
 	_svr_boardcast_stop();
 	_svr_listen_stop();
+
+    // 是否发一下关闭的通知，后续加
 
 	return 0;
 }

@@ -230,6 +230,7 @@ int clt_model_stop()
 	g_cltbc_listen.pause = true;
 	uv_mutex_unlock(&g_cltbc_listen.mutex);
 
+    // 给所有已连接的服务端发送关闭消息，并清理自己的缓存
 	_client_shutdown_oriented_notify();
 
 	return 0;

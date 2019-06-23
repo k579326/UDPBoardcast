@@ -56,8 +56,8 @@ private:
 	}
 	~SafeCltList()
 	{
-		uv_mutex_destroy(&mutex_);
         uv_cond_destroy(&cond_);
+		uv_mutex_destroy(&mutex_);
 	}
 
 	std::map<CLIENTIP, int> hostList_;
