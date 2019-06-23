@@ -10,7 +10,8 @@
 #include "boardcast_common.h"
 #include "boardcast_define.h"
 #include "boardcast_address/select_network.h"
-#include "boardcast_cache.h"
+#include "bridge/boardcast_cache.h"
+#include "ssnet_define.h"
 
 static socket_env_t g_cltbc_listen;		// 用于接收服务端广播
 static SOCKET g_clt_stutdown_socket = -1;		// 用于客户端停止是发送消息
@@ -35,10 +36,10 @@ static void _oriented_feedback_alive(const std::string& ip)
     {
         printf("[Client Alive] send keepalive msg failed!\n");
     }
-    else
-    {
-        printf("[Client Alive] feedback to %s success!\n", ip.c_str());
-    }
+    //else
+    //{
+    //    printf("[Client Alive] feedback to %s success!\n", ip.c_str());
+    //}
     return;
 }
 
@@ -152,12 +153,13 @@ static void _client_shutdown_oriented_notify()
         ret = sendto(g_clt_startup_socket, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
         if (ret != sizeof(boardcast_package_t))
         {
-            printf("[Client Oriented] client send close to %s failed!\n", it->ip.c_str());
+            // TODO:
+            // printf("[Client Oriented] client send close to %s failed!\n", it->ip.c_str());
         }
-        else
-        {
-            printf("[Client Oriented] client send close to %s success!\n", it->ip.c_str());
-        }
+        //else
+        //{
+        //    printf("[Client Oriented] client send close to %s success!\n", it->ip.c_str());
+        //}
     }
 }
 

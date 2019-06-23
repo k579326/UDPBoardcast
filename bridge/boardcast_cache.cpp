@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <algorithm>
 #include "boardcast_cache.h"
+#include "ssnet_define.h"
+#include "connreq_mgr.h"
 
 SafeSvrList* SafeSvrList::getInstance()
 {
@@ -24,7 +26,6 @@ struct peer_compare
 
 bool SafeSvrList::add(const peer_info_t& peer)
 {
-	bool flag = false;
 	std::vector<peer_info_t>::const_iterator it;
 	peer_compare CMP;
 	lock();
@@ -34,20 +35,15 @@ bool SafeSvrList::add(const peer_info_t& peer)
 	if (it == hostList_.end())
 	{
 		hostList_.push_back(peer);
-		flag = true;
-	}
-	else
-	{
-		flag = false;
+        deliver_svrchange_msg(REQ_Add, &peer);
 	}
 	unlock();
 
-	return flag;
+	return true;
 }
 
 bool SafeSvrList::del(const peer_info_t& peer)
 {
-	bool flag = false;
 	std::vector<peer_info_t>::const_iterator it;
 	peer_compare CMP;
 
@@ -58,15 +54,11 @@ bool SafeSvrList::del(const peer_info_t& peer)
 	if (it != hostList_.end())
 	{
 		hostList_.erase(it);
-		flag = true;
-	}
-	else
-	{
-		flag = false;
+        deliver_svrchange_msg(REQ_Del, &peer);
 	}
 	unlock();
 
-	return flag;
+	return true;
 }
 
 std::vector<peer_info_t> SafeSvrList::clr()
@@ -74,7 +66,11 @@ std::vector<peer_info_t> SafeSvrList::clr()
 	std::vector<peer_info_t> lst;
 
 	lock();
+
 	lst = hostList_;
+    hostList_.clear();
+    clean_svrchange_msg();
+
 	unlock();
 
 	return lst;
@@ -93,11 +89,15 @@ void SafeCltList::_keepalive(void* param)
         for (std::map<CLIENTIP, int>::iterator it = scl->hostList_.begin();
              it != scl->hostList_.end(); )
         {
-            it->second += SVR_BOARDCAST_TIMESPACE;
+            it->second += SVR_BC_LISTEN_TIMESPACE;
             if (it->second > SVR_KEEPALIVE_TIMEOUT)
             {// 超时
+                peer_info_t peer;
+                peer.ip = it->first;
+                peer.port = 0;
+
                 it = scl->hostList_.erase(it);
-                // TODO: 发送超时消息给队列
+                deliver_cltchange_msg(REQ_Del, &peer);
             }
             else
             {
@@ -118,7 +118,6 @@ SafeCltList* SafeCltList::getInstance()
 
 bool SafeCltList::add(const CLIENTIP& ip)
 {
-    bool flag = false;
     std::map<CLIENTIP, int>::iterator it;
 
     lock();
@@ -126,21 +125,23 @@ bool SafeCltList::add(const CLIENTIP& ip)
     it = hostList_.find(ip);
     if (it == hostList_.end())
     {
-        hostList_[ip] = -SVR_BOARDCAST_TIMESPACE; // 插入新的客户端，keepalive定为负间隔
-        flag = true;
+        hostList_[ip] = -SVR_BC_LISTEN_TIMESPACE; // 插入新的客户端，keepalive定为负间隔
+
+        peer_info_t peer;
+        peer.ip = ip;
+        peer.port = 0;
+        deliver_cltchange_msg(REQ_Add, &peer);
     }
     else
     {
-        it->second = -SVR_BOARDCAST_TIMESPACE; // 重置keepalive时间
-        flag = false;
+        it->second = -SVR_BC_LISTEN_TIMESPACE; // 重置keepalive时间
     }
     unlock();
 
-    return flag;
+    return true;
 }
 bool SafeCltList::del(const CLIENTIP& ip)
 {
-    bool flag = false;
     std::map<CLIENTIP, int>::iterator it;
 
     lock();
@@ -148,16 +149,16 @@ bool SafeCltList::del(const CLIENTIP& ip)
     it = hostList_.find(ip);
     if (it != hostList_.end())
     {
-        hostList_.erase(it); // 插入新的客户端，keepalive定为负间隔
-        flag = true;
-    }
-    else
-    {
-        flag = false;
+        hostList_.erase(it);
+
+        peer_info_t peer;
+        peer.ip = it->first;
+        peer.port = 0;
+        deliver_cltchange_msg(REQ_Del, &peer);
     }
     unlock();
 
-    return flag;
+    return true;
 }
 std::vector<CLIENTIP> SafeCltList::clr()
 {
@@ -171,6 +172,8 @@ std::vector<CLIENTIP> SafeCltList::clr()
         lst.push_back(it->first);
         it = hostList_.erase(it);
     }
+
+    clean_cltchange_msg();
 
     unlock();
 

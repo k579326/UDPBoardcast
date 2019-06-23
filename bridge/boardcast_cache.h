@@ -4,8 +4,7 @@
 
 #include <vector>
 #include <map>
-#include "uv.h"
-#include "boardcast_protocol.h"
+#include "sysheader.h"
 #include "ssnet_define.h"
 
 class SafeSvrList

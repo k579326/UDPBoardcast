@@ -8,7 +8,7 @@
 
 #include "boardcast_address/select_network.h"
 #include "boardcast_define.h"
-#include "boardcast_cache.h"
+#include "bridge/boardcast_cache.h"
 
 
 static socket_env_t g_svr_bc;			// 用于服务器广播
@@ -38,7 +38,8 @@ static void _oriented_feedback(const char* clientip)
 				 0, (sockaddr*)&clientAddr, sizeof(clientAddr));
 	if (ret != sizeof(boardcast_package_t))
 	{
-		printf("[Server Feedback] error, send %d bytes\n", ret);
+        // TODO:
+		// printf("[Server Feedback] error, send %d bytes\n", ret);
 	}
 
 	return;
