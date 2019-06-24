@@ -147,7 +147,7 @@ static void _boardcast_svr_msg(void* msg)
 		if (g_svr_bc.pause)
 		{
 			// 停止前广播一次服务模式关闭
-			// make_shutdown_pkg(&pkg);
+			make_shutdown_pkg(&pkg);
 			uv_cond_wait(&g_svr_bc.cond, &g_svr_bc.mutex);
 		}
 		uv_mutex_unlock(&g_svr_bc.mutex);
@@ -158,10 +158,6 @@ static void _boardcast_svr_msg(void* msg)
 			// printf("[Server Boardcast] success, send %d bytes!\n", ret);
 		}
 
-		if (uv_sem_trywait(&g_svr_bc.sem_exit) == 0)
-		{// 增加一处退出信号捕获，降低程序退出时等待几率
-			break;
-		}
 		CB_THREAD_SLEEP_MS(SVR_BOARDCAST_TIMESPACE);
 	}
 
@@ -209,6 +205,7 @@ static int _svr_listen_uninit()
 
 	uv_cond_signal(&g_svrbc_listen.cond);
 	uv_thread_join(&g_svrbc_listen.thread);
+
 	uv_cond_destroy(&g_svrbc_listen.cond);
 	uv_mutex_destroy(&g_svrbc_listen.mutex);
 	uv_sem_destroy(&g_svrbc_listen.sem_exit);
@@ -247,8 +244,7 @@ static int _svr_boardcast_uninit()
 
 	uv_sem_post(&g_svr_bc.sem_exit);
 	uv_cond_signal(&g_svr_bc.cond);
-
-	// uv_thread_join(&g_svr_bc.thread); 不等待子线程，可能发生崩溃
+	uv_thread_join(&g_svr_bc.thread); // 不等待子线程，可能发生崩溃
 
 	uv_mutex_destroy(&g_svr_bc.mutex);
 	uv_sem_destroy(&g_svr_bc.sem_exit);

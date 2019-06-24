@@ -154,12 +154,12 @@ bool SafeCltList::del(const CLIENTIP& ip)
     it = hostList_.find(ip);
     if (it != hostList_.end())
     {
-        hostList_.erase(it);
-
         peer_info_t peer;
         peer.ip = it->first;
         peer.port = 0;
         deliver_cltchange_msg(REQ_Del, &peer);
+
+        hostList_.erase(it);
     }
     unlock();
 

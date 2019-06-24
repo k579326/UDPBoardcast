@@ -150,7 +150,7 @@ static void _client_shutdown_oriented_notify()
 
         make_shutdown_pkg(&pkg);
 
-        ret = sendto(g_clt_startup_socket, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
+        ret = sendto(g_clt_stutdown_socket, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
         if (ret != sizeof(boardcast_package_t))
         {
             // TODO:
@@ -237,13 +237,9 @@ int clt_model_stop()
 }
 int clt_model_uninit()
 {
+    clt_model_stop();
+
 	uv_sem_post(&g_cltbc_listen.sem_exit);
-
-	// 唤醒挂起的线程
-	uv_mutex_lock(&g_cltbc_listen.mutex);
-	g_cltbc_listen.pause = false;
-	uv_mutex_unlock(&g_cltbc_listen.mutex);
-
 	uv_cond_signal(&g_cltbc_listen.cond);
 	uv_thread_join(&g_cltbc_listen.thread);
 
