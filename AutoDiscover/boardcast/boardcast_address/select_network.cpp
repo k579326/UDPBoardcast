@@ -104,26 +104,14 @@ static std::vector<netcard_t> _readRegInfoForNetCard()
 
 
 
-static unsigned long _select(std::vector<network_t>& nwList)
+static bool _select(const std::vector<network_t>& nwList, network_t* targetNw)
 {
 	std::vector<netcard_t> ncList;
 	unsigned long boardcastaddr;
 
-	for (std::vector<network_t>::iterator it = nwList.begin(); it != nwList.end(); )
-	{
-		if (it->ip == std::string("0.0.0.0"))
-		{ 
-			it = nwList.erase(it);
-		}
-		else
-		{
-			it++;
-		}
-	}
-
 	if (nwList.empty())
 	{
-		return INADDR_BROADCAST;
+		return false;
 	}
 
 	ncList = _readRegInfoForNetCard();
@@ -133,17 +121,13 @@ static unsigned long _select(std::vector<network_t>& nwList)
 	for (std::vector<netcard_t>::iterator it = ncList.begin(); it != ncList.end(); )
 	{
 		bool hit = false;
-		for (std::vector<network_t>::iterator in = nwList.begin(); in != nwList.end(); in++)
+		for (std::vector<network_t>::const_iterator in = nwList.begin(); in != nwList.end(); in++)
 		{
 			it->Characteristics = it->Characteristics & (NCF_VIRTUAL | NCF_PHYSICAL);
 			if (strcmp(in->adpname, it->adpname) == 0 && it->Characteristics == NCF_PHYSICAL)
 			{
-				ULONG ip, mask;
-				inet_pton(AF_INET, in->ip, &ip);
-				inet_pton(AF_INET, in->mask, &mask);
-				boardcastaddr = ip | ~mask;
-				
-				return boardcastaddr;
+                memcpy(targetNw, &*in, sizeof(network_t));
+				return true;
 			}
 		}
 
@@ -157,55 +141,99 @@ static unsigned long _select(std::vector<network_t>& nwList)
 		}
 	}
 
-	return INADDR_BROADCAST;
+	return false;
+}
+
+
+static std::vector<network_t> _AdapterList()
+{
+    ULONG boardcastaddr = INADDR_BROADCAST;
+    PIP_ADAPTER_INFO pAdapterInfo;
+    PIP_ADAPTER_INFO pAdapter = NULL;
+    DWORD dwRetVal = 0;
+
+    ULONG ulOutBufLen = sizeof(IP_ADAPTER_INFO);
+    std::vector<network_t> nwList;
+
+    pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
+
+    if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW)
+    {
+        free(pAdapterInfo);
+        pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
+    }
+
+    if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) == NO_ERROR)
+    {
+        pAdapter = pAdapterInfo;
+        while (pAdapter)
+        {
+            network_t nw;
+
+            strcpy(nw.ip, pAdapter->IpAddressList.IpAddress.String);
+            strcpy(nw.mask, pAdapter->IpAddressList.IpMask.String);
+            strcpy(nw.adpname, pAdapter->AdapterName);
+
+            nwList.push_back(nw);
+            pAdapter = pAdapter->Next;
+        }
+    }
+
+    if (pAdapterInfo)
+        free(pAdapterInfo);
+
+    for (std::vector<network_t>::iterator it = nwList.begin(); it != nwList.end(); )
+    {
+        if (it->ip == std::string("0.0.0.0"))
+        {
+            it = nwList.erase(it);
+        }
+        else
+        {
+            it++;
+        }
+    }
+
+    return nwList;
+}
+
+static bool _PhyNetConfigInfo(network_t* nw)
+{
+    std::vector<network_t> nwlist = _AdapterList();
+
+    return _select(nwlist, nw);
 }
 
 
 unsigned long PhyBoardcastAddr()
 {
-	ULONG boardcastaddr = INADDR_BROADCAST;
-	PIP_ADAPTER_INFO pAdapterInfo;
-	PIP_ADAPTER_INFO pAdapter = NULL;
-	DWORD dwRetVal = 0;
+    unsigned long boardcastaddr = INADDR_BROADCAST;
+    network_t nw;
 
-	ULONG ulOutBufLen = sizeof(IP_ADAPTER_INFO);
-	std::vector<network_t> nwList;
+    if (_PhyNetConfigInfo(&nw))
+    {
+        ULONG ip, mask;
+        inet_pton(AF_INET, nw.ip, &ip);
+        inet_pton(AF_INET, nw.mask, &mask);
+        boardcastaddr = ip | ~mask;
+    }
 
-	pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
-	
-	if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW)
-	{
-		free(pAdapterInfo);
-		pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
-	}
-
-	if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) == NO_ERROR)
-	{
-		pAdapter = pAdapterInfo;
-		while (pAdapter)
-		{
-			network_t nw;
-
-			strcpy(nw.ip, pAdapter->IpAddressList.IpAddress.String);
-			strcpy(nw.mask, pAdapter->IpAddressList.IpMask.String);
-			strcpy(nw.adpname, pAdapter->AdapterName);
-
-			nwList.push_back(nw);
-			pAdapter = pAdapter->Next;
-		}
-
-		boardcastaddr = _select(nwList);
-
-		char ipbf[64];
-		inet_ntop(AF_INET, &boardcastaddr, ipbf, 64);
-		printf("[select boardcast address] %s\n", ipbf);
-	}
-
-	if (pAdapterInfo)
-		free(pAdapterInfo);
-
-	return boardcastaddr;
+    return boardcastaddr;
 }
+
+unsigned long PhyIpAddress()
+{
+    unsigned long ip = htonl(INADDR_ANY);
+    network_t nw;
+
+    if (_PhyNetConfigInfo(&nw))
+    {
+        inet_pton(AF_INET, nw.ip, &ip);
+    }
+
+    return ip;
+}
+
 
 #else
 
@@ -215,7 +243,10 @@ unsigned long PhyBoardcastAddr()
 {
 	return htonl(INADDR_BROADCAST);
 }
-
+unsigned long PhyIpAddress()
+{
+    return htonl(INADDR_ANY);
+}
 #endif
 
 

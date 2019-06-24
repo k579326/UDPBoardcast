@@ -154,12 +154,7 @@ static void _client_shutdown_oriented_notify()
         if (ret != sizeof(boardcast_package_t))
         {
             // TODO:
-            // printf("[Client Oriented] client send close to %s failed!\n", it->ip.c_str());
         }
-        //else
-        //{
-        //    printf("[Client Oriented] client send close to %s success!\n", it->ip.c_str());
-        //}
     }
 }
 

@@ -3,6 +3,7 @@
 #include "cb_sysinfo.h"
 #include "boardcast_protocol.h"
 #include "boardcast_common.h"
+#include "boardcast_address/select_network.h"
 
 int setnonblock(SOCKET sockfd)
 {
@@ -64,6 +65,8 @@ in_addr StringToNetIp(const char* ip)
 SOCKET create_boardcast_socket()
 {
 	int ret = 0;
+    sockaddr_in localaddr;
+
 	SOCKET skfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (!checksocket(skfd))
 	{
@@ -97,9 +100,10 @@ SOCKET create_listen_udp_socket(short port)
 		cleansocket(&skfd); // TODO:
 		return -1;
 	}
-
+    
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_addr.s_addr = PhyIpAddress();
+    // addr.sin_addr = StringToNetIp("192.168.109.1");
 	addr.sin_port = htons(port);
 
 	ret = bind(skfd, (sockaddr*)& addr, sizeof(addr));
@@ -116,11 +120,14 @@ SOCKET create_listen_udp_socket(short port)
 SOCKET create_udp_socket()
 {
 	int ret = 0;
+    sockaddr_in localaddr;
+
 	SOCKET skfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (!checksocket(skfd))
 	{
 		return -1; // TODO:
 	}
+
 	return skfd;
 }
 
