@@ -38,7 +38,6 @@ void listen_cb(uv_stream_t* server, int status)
 
     uv_run(&client_loop, UV_RUN_ONCE);
 
-
     return;
 }
 
