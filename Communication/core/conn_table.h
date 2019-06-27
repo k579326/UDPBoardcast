@@ -10,6 +10,7 @@
 
 
 int add_client_connect(const tcp_conn_t* conn);
+tcp_conn_t* find_client_connect(uint16_t connId);
 int del_client_connect();
 
 

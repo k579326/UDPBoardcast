@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <queue>
 #include "comm_core.h"
+#include "conn_table.h"
 #include "comm_define.h"
 #include "sysheader.h"
 
@@ -69,18 +70,73 @@ int init_server_loop()
 }
 
 
+void write_cb(uv_write_t* req, int status)
+{
+
+}
+
+int do_write(write_task_t* wt)
+{
+    uv_write_t w;
+
+    w.data = wt;
+    tcp_conn_t* conn = find_client_connect(wt->connId);
+    if (!conn)
+    {
+        ?
+    }
+
+
+    uv_write(&w, (uv_stream_t*)&conn->handle, , write_cb);
+
+
+}
+
+
+
+
+void client_msg_process(asyn_task_type type, abs_task_t* task)
+{
+    switch (type)
+    {
+    case asyn_task_type::WRITE:
+    {
+        write_task_t* wt = (write_task_t*)task;
+
+        do_write(wt);
+
+        break;
+    }
+    case asyn_task_type::READ:
+
+        break;
+    case asyn_task_type::CONNECT:
+
+        break;
+    case asyn_task_type::CLOSE:
+
+        break;
+    default:
+        
+        break;
+    }
+
+}
+
+
+
 void _async_cb(uv_async_t* handle)
 {
+    async_req_t* req = (async_req_t*)handle->data;
+
+    // msger不再使用
+    uv_sem_post(&req->msger->sem);
+
+
+    client_msg_process(req->type, req->task);
+
 
 }
-
-void client_msg_process()
-{
-    
-
-}
-
-
 
 
 
