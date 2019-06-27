@@ -44,7 +44,7 @@ int client()
     uv_tcp_t handle;
 
     sockaddr_in addr;
-    uv_ip4_addr("192.168.0.229", 10038, &addr);
+    uv_ip4_addr("192.168.52.1", 10038, &addr);
 
     uv_tcp_init_ex(&loop, &handle, AF_INET);
 

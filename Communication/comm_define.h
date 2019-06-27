@@ -15,50 +15,57 @@ typedef struct
 }tcp_conn_t;
 
 
+#define PKG_TYPE_ALIVE  0       // ä¿æ´»æ•°æ®åŒ…
+#define PKG_TYPE_DATA   1       // æ™®é€šæ•°æ®åŒ…
+#define PKG_TYPE_PUSH   2       // æ¨é€æ•°æ®åŒ…
 
 
 
-
-
-enum asyn_resp_type
+#pragma pack(push, 1)
+typedef struct
 {
-    WRITE_DONE,
-    READ_DONE,
-    CONN_COMING,
-    ACCEPT_DONE,
-    TIMEOUT,
-};
+    uint8_t         version;
+    uint64_t        taskId;         // ä»»åŠ¡ID,æ ‡è¯†å›åº”å±äºå“ªä¸ªä»»åŠ¡ï¼Œåªæœ‰æ™®é€šæ•°æ®åŒ…æœ‰æ•ˆ
+    uint8_t         type;           // åº•å±‚tcpé€šä¿¡çš„æ•°æ®åŒ…ç±»å‹
+    uint32_t        length;         // æ•°æ®é•¿åº¦
+    uint8_t         data[0];        // æ•°æ®
+}comm_pkg_t;
+#pragma pack(pop)
+
 
 enum asyn_req_type
 {
     WRITE,
     READ,
     CONNECT,
-
+    CLOSE
 };
 
 typedef struct
 {
     uint32_t        err;
-    uint16_t        connId;         // ±êÊ¶»ØÓ¦À´×ÔÄÄÌõÁ¬½Ó
-    uint64_t        taskId;         // ÈÎÎñID,±êÊ¶»ØÓ¦ÊôÓÚÄÄ¸öÈÎÎñ
-    asyn_resp_type  type;           // »ØÓ¦µÄÀàĞÍ£¬¿ÉÄÜÕâ¸ö½á¹¹Ìå²»ĞèÒª
-    uint32_t        datalen;        // »ØÓ¦µÄÊı¾İ³¤¶È
-    uint8_t* data;           // »ØÓ¦µÄÊı¾İ
+    uint16_t        connId;         // æ ‡è¯†å›åº”æ¥è‡ªå“ªæ¡è¿æ¥
+    uint64_t        taskId;         // ä»»åŠ¡ID,æ ‡è¯†å›åº”å±äºå“ªä¸ªä»»åŠ¡
+    asyn_resp_type  type;           // å›åº”çš„ç±»å‹ï¼Œå¯èƒ½è¿™ä¸ªç»“æ„ä½“ä¸éœ€è¦
+    uint32_t        datalen;        // å›åº”çš„æ•°æ®é•¿åº¦
+    void*           data;           // å›åº”çš„æ•°æ®
 }asyn_resp_t;
 
 
 
 typedef struct
 {
-    uint16_t        connId;         // ±êÊ¶ÇëÇó·¢ÍùÄÄ¸öÁ¬½Ó
-    uint64_t        taskId;         // ÈÎÎñID
-    asyn_resp_type  type;           // ÈÎÎñÀàĞÍ
-    uint32_t        datalen;        // ÇëÇóµÄÊı¾İ³¤¶È
-    uint8_t* data;                  // ÇëÇóµÄÊı¾İ
+    uint16_t        connId;         // æ ‡è¯†è¯·æ±‚å‘å¾€å“ªä¸ªè¿æ¥
+    uint64_t        taskId;         // ä»»åŠ¡ID
+    asyn_resp_type  type;           // ä»»åŠ¡ç±»å‹
+    uint32_t        datalen;        // è¯·æ±‚çš„æ•°æ®é•¿åº¦
+    void*           data;           // è¯·æ±‚çš„æ•°æ®
 }asyn_req_t;
 
+typedef struct
+{
 
+}async_;
 
 
 
