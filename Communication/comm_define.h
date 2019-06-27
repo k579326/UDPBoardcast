@@ -9,7 +9,14 @@
 
 typedef struct
 {
+    uv_async_t  h;
+    bool        used;
+}async_res_t;
+
+typedef struct
+{
     uv_tcp_t    handle;
+    async_res_t async[2];
     char        ip[64];
     short       port;
 }tcp_conn_t;
@@ -64,8 +71,9 @@ typedef struct
 
 typedef struct
 {
+    uv_async_t async;
 
-}async_;
+}async_task_t;
 
 
 

@@ -50,11 +50,18 @@ int server()
     uv_tcp_t handle;
     
     sockaddr_in addr;
-    uv_ip4_addr("192.168.52.1", 10038, &addr);
+    uv_ip4_addr("192.168.0.229", 10038, &addr);
 
     uv_tcp_init_ex(&loop, &handle, AF_INET);
     
     uv_tcp_bind(&handle, (sockaddr*)&addr, 0);
+
+    uv_async_t async;
+    uv_async_init(&loop, &async, NULL);
+    uv_async_send(&async);
+
+
+
     uv_listen((uv_stream_t*)&handle, 1, listen_cb);
     
     while (1)
