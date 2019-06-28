@@ -4,6 +4,10 @@
 #pragma once
 
 
+#define CLIENT_LOOP 0
+#define SERVER_LOOP 1
+
+
 
 
 int CreateClient(const char* ip);

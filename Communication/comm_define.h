@@ -36,6 +36,8 @@ typedef struct
 #pragma pack(pop)
 
 
+
+
 enum asyn_task_type
 {
     WRITE,

@@ -70,24 +70,35 @@ int init_server_loop()
 }
 
 
-void write_cb(uv_write_t* req, int status)
+void timer_cb(uv_timer_t* handle)
 {
 
 }
 
+void write_cb(uv_write_t* req, int status)
+{
+    
+}
+
 int do_write(write_task_t* wt)
 {
-    uv_write_t w;
+    uv_write_t* w = new uv_write_t;
+    uv_timer_t* timer = new uv_timer_t;
 
-    w.data = wt;
+    w->data = wt;
     tcp_conn_t* conn = find_client_connect(wt->connId);
     if (!conn)
     {
         ?
     }
 
+    timer->data = w;
+    uv_write(w, (uv_stream_t*)&conn->handle, , write_cb);
+    
+    uv_timer_init(conn->handle.loop, timer);
+    uv_timer_start(timer, timer_cb, 5000, 0);
 
-    uv_write(&w, (uv_stream_t*)&conn->handle, , write_cb);
+    
 
 
 }
