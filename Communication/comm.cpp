@@ -1,31 +1,49 @@
 
 
 #include "comm.h"
+#include "comm_internal.h"
 #include "comm_define.h"
 #include "async/async_task.h"
+#include "ssnet_err.h"
 
-
-int send(uint16_t connId, const void* indata, int inlen, void* outdata, int* outlen)
+int ssn_send(uint16_t connId, const void* indata, int inlen, void** outdata, int* outlen, uint32_t timeout)
 {
-    write_task_t task = { 0 };
+    int ret = 0;
 
-    if (inlen > RECV_BUF_MAX)
+    if (indata == NULL || inlen <= 0 || outdata == NULL || outlen == NULL)
     {
-        return -1;
+        return ERR_PARAM;
     }
 
-    task.data = malloc(RECV_BUF_MAX);
-    if (task.data == NULL)
-    {
-        return -1;
-    }
-
-    task.buflen = RECV_BUF_MAX;
-    task.datalen = inlen;
-    memcpy(task.data, indata, inlen);
-
-    task.connId = connId;
-    task.taskId = ;
-
+    ret = async_send(connId, indata, inlen, outdata, outlen, timeout);
     
+    return ret;
 }
+
+int ssn_connect(char* ip, short port, uint32_t timeout)
+{
+    int ret = 0;
+
+    if (ip == NULL)
+    {
+        return ERR_PARAM;
+    }
+
+    return async_conn(ip, port, timeout);
+}
+
+int ssn_push(const void* indata, int inlen)
+{
+    int ret = 0;
+
+    if (indata == NULL || inlen <= 0)
+    {
+        return ERR_PARAM;
+    }
+
+    return async_push(indata, inlen);
+}
+
+
+
+

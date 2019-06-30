@@ -223,7 +223,7 @@ unsigned long PhyBoardcastAddr()
 
 unsigned long PhyIpAddress()
 {
-    unsigned long ip = htonl(INADDR_ANY);
+    unsigned long ip = INADDR_ANY;
     network_t nw;
 
     if (_PhyNetConfigInfo(&nw))
@@ -241,11 +241,11 @@ unsigned long PhyIpAddress()
 #include <netinet/in.h>
 unsigned long PhyBoardcastAddr()
 {
-	return htonl(INADDR_BROADCAST);
+	return INADDR_BROADCAST;
 }
 unsigned long PhyIpAddress()
 {
-    return htonl(INADDR_ANY);
+    return INADDR_ANY;
 }
 #endif
 

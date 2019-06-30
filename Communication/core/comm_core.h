@@ -3,19 +3,15 @@
 
 #pragma once
 
+#include "sysheader.h"
 
-#define CLIENT_LOOP 0
-#define SERVER_LOOP 1
+void listen_cb(uv_stream_t* server, int status);
 
+void connect_cb(uv_connect_t* req, int status);
 
-
-
-int CreateClient(const char* ip);
-int CreateServer(const char* ip, short port);
+void async_cb(uv_async_t* handle);
 
 
-int init_client_loop();
-int init_server_loop();
 
 
 

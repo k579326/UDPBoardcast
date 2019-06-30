@@ -6,7 +6,7 @@
 #include "boardcast_protocol.h"
 #include "boardcast_common.h"
 
-#include "boardcast_address/select_network.h"
+#include "select_network.h"
 #include "boardcast_define.h"
 #include "bridge/boardcast_cache.h"
 #include "threadhelper.h"

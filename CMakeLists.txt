@@ -6,6 +6,10 @@ include_directories(include)
 include_directories(third/cb_sysinfo/inc)
 include_directories(third/cb_thread/inc)
 include_directories(third/libuv/include)
+include_directories(common)
+
+FILE(GLOB SELECTADDRSRC common/*)
+
 
 add_subdirectory(third/cb_sysinfo)
 add_subdirectory(third/libuv)

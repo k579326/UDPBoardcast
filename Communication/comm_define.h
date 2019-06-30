@@ -3,80 +3,61 @@
 #pragma once
 
 
+#include <string>
 #include "sysheader.h"
 
-
+using namespace std;
 
 #define RECV_BUF_MAX    (1024 * 1024)
-
-
-typedef struct
-{
-    uv_tcp_t    handle;
-    char        ip[64];
-    short       port;
-}tcp_conn_t;
-
-
-#define PKG_TYPE_ALIVE  0       // 保活数据包
-#define PKG_TYPE_DATA   1       // 普通数据包
-#define PKG_TYPE_PUSH   2       // 推送数据包
-
-
-
-#pragma pack(push, 1)
-typedef struct
-{
-    uint8_t         version;
-    uint64_t        taskId;         // 任务ID,标识回应属于哪个任务，只有普通数据包有效
-    uint8_t         type;           // 底层tcp通信的数据包类型
-    uint32_t        length;         // 数据长度
-    uint8_t         data[0];        // 数据
-}comm_pkg_t;
-#pragma pack(pop)
 
 
 
 
 enum asyn_task_type
 {
-    WRITE,
+    RW,
+    PUSH,           // 推送任务
     READ,
     CONNECT,        // 对于客户端，标识主动连接；对于服务端，标识被动连接
     CLOSE
 };
 
 
-typedef void abs_task_t;
-// Read
 typedef struct
 {
     uint32_t        err;
-    char            errmsg[64];
-    uint16_t        connId;         // 标识请求发往哪个连接
+    char            errmsg[128];
     uint64_t        taskId;         // 任务ID
-    uint32_t        datalen;        // 请求的数据长度
-    uint8_t         data[];           // 请求的数据
+    asyn_task_type  type;
+    uv_sem_t        notify;
+}abs_task_t;
+
+
+// Only Read
+typedef struct
+{
+    abs_task_t      common;
+    uint16_t        connId;
+    string          data;
 }read_task_t;
 
-// Write/W&R
+// W&R
 typedef struct
 {
-    uint32_t        err;
-    char            errmsg[64];
+    abs_task_t      common;
+    //uv_timer_t      timer;
+    uint32_t        timeout;        // 超时时间：ms
     uint16_t        connId;         // 标识请求发往哪个连接
-    uint64_t        taskId;         // 任务ID
-    uint32_t        buflen;         // data的buf总长度
-    uint32_t        datalen;        // 请求的数据长度
-    void*           data;           // 请求的数据
-}write_task_t;
+    string          indata;         // 用户任务数据
+    string          outdata;        // 返回的数据
+}rw_task_t;
 
-// Connect (Client)
+// client do Connect
 typedef struct
 {
-    uint32_t        err;
-    char            errmsg[64];
-    uint64_t        taskId;         // 任务ID
+    abs_task_t      common;
+    uint32_t        timeout;        // 超时时间：ms
+    //uv_timer_t      timer;
     char            ip[64];
     short           port;           // 主机序
 }conn_task_t;
@@ -84,24 +65,8 @@ typedef struct
 // Close
 typedef struct
 {
-
+    abs_task_t      common;
 }close_task_t;
-
-
-typedef struct
-{
-    uv_sem_t 	sem;
-    uv_async_t async;
-}async_t;
-
-
-typedef struct
-{
-    async_t*    msger;
-    abs_task_t* task;
-    asyn_task_type  type;           // 任务类型
-    uv_sem_t    finish;
-}async_req_t;
 
 
 

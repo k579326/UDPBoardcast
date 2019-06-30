@@ -23,6 +23,9 @@ void read_cb(uv_stream_t* stream,
     memcpy(buff, buf->base, nread);
 
     printf("[read buf] %s \n", buf->base);
+
+    uv_read_stop(stream);
+    uv_read_start(stream, alloc_cb, read_cb);
 }
 
 void conn_cb(uv_connect_t* req, int status)
@@ -50,12 +53,12 @@ int client()
 
     uv_connect_t ct;
     uv_tcp_connect(&ct, &handle, (sockaddr*)& addr, conn_cb);
-
-    uv_run(&loop, UV_RUN_ONCE);
-
+    uv_close((uv_handle_t*)&handle, NULL);
     while (1)
     {
         uv_run(&loop, UV_RUN_ONCE);
+        uv_loop_close(&loop);
+
         Sleep(200);
     }
 
