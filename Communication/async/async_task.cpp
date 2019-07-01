@@ -35,17 +35,17 @@ int async_send(uint16_t connId, const void* indata, int inlen, void** outdata, i
     //uv_timer_init(comm_client_loop(), &task.timer);
 
     async->data = (void*)&task;
-    // ·ÅÈëÈÎÎñ¶ÓÁĞ
+    // æ”¾å…¥ä»»åŠ¡é˜Ÿåˆ—
     cl_task_add((abs_task_t*)&task);
 
-    // ·¢ËÍÒì²½ÈÎÎñ
+    // å‘é€å¼‚æ­¥ä»»åŠ¡
     uv_async_send(async);
 
-    // µÈ´ı´¦ÀíÍê³É
+    // ç­‰å¾…å¤„ç†å®Œæˆ
     uv_sem_wait(&task.common.notify);
 
 
-    // ¼ì²é·µ»Ø½á¹û£¬»ñÈ¡Êı¾İ
+    // æ£€æŸ¥è¿”å›ç»“æœï¼Œè·å–æ•°æ®
     if (task.common.err != 0){
         ret = task.common.err;
         // LOG task.common.errmsg
@@ -57,8 +57,8 @@ int async_send(uint16_t connId, const void* indata, int inlen, void** outdata, i
     memcpy(*outdata, task.outdata.c_str(), *outlen);
 
 exit:
-    // ÇåÀí×ÊÔ´
-    // destory_async(async);    // Òì²½×ÊÔ´½»¸øloopÑ­»·ÊÍ·Å
+    // æ¸…ç†èµ„æº
+    // destory_async(async);    // å¼‚æ­¥èµ„æºäº¤ç»™loopå¾ªç¯é‡Šæ”¾
     uv_sem_destroy(&task.common.notify);
     return ret;
 }

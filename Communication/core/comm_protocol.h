@@ -5,9 +5,9 @@
 
 #include <stdint.h>
 
-#define PKG_TYPE_ALIVE      0       // ±£»îÊı¾İ°ü
-#define PKG_TYPE_COMMON     1       // ÆÕÍ¨Êı¾İ°ü
-#define PKG_TYPE_PUSH       2       // ÍÆËÍÊı¾İ°ü
+#define PKG_TYPE_ALIVE      0       // ä¿æ´»æ•°æ®åŒ…
+#define PKG_TYPE_COMMON     1       // æ™®é€šæ•°æ®åŒ…
+#define PKG_TYPE_PUSH       2       // æ¨é€æ•°æ®åŒ…
 
 #define COMM_PROTOCOL_VERSION_1   1
 #define COMM_PROTOCOL_VERSION_2   2   
@@ -21,11 +21,11 @@
 typedef struct
 {
     uint8_t         version;
-    uint32_t        magic;          // Ä§Êı
-    uint64_t        taskId;         // ÈÎÎñID,±êÊ¶»ØÓ¦ÊôÓÚÄÄ¸öÈÎÎñ£¬Ö»ÓĞÆÕÍ¨Êı¾İ°üÓĞĞ§
-    uint8_t         type;           // µ×²ãtcpÍ¨ĞÅµÄÊı¾İ°üÀàĞÍ
-    uint32_t        length;         // Êı¾İ³¤¶È
-    uint8_t         data[0];        // Êı¾İ
+    uint32_t        magic;          // é­”æ•°
+    uint64_t        taskId;         // ä»»åŠ¡ID,æ ‡è¯†å›åº”å±äºå“ªä¸ªä»»åŠ¡ï¼Œåªæœ‰æ™®é€šæ•°æ®åŒ…æœ‰æ•ˆ
+    uint8_t         type;           // åº•å±‚tcpé€šä¿¡çš„æ•°æ®åŒ…ç±»å‹
+    uint32_t        length;         // æ•°æ®é•¿åº¦
+    uint8_t         data[0];        // æ•°æ®
 }comm_pkg_t;
 #pragma pack(pop)
 
@@ -33,11 +33,11 @@ typedef struct
 
 comm_pkg_t* proto_build_package(const void* buf, int buflen, uint8_t pkgType, uint64_t taskId);
 
-// ¸Ãº¯Êı·µ»ØµÄpkg²»ÒªÊ¹ÓÃproto_release_packageÊÍ·Å
+// è¯¥å‡½æ•°è¿”å›çš„pkgä¸è¦ä½¿ç”¨proto_release_packageé‡Šæ”¾
 comm_pkg_t* proto_parse_package(void** buf, int* remainSize);
 
 int proto_check_pkg(comm_pkg_t* pkg);
 
-// Ö»ÓÃÓÚÊÍ·Åproto_build_package ´´½¨µÄpkg
+// åªç”¨äºé‡Šæ”¾proto_build_package åˆ›å»ºçš„pkg
 void proto_release_package(comm_pkg_t* pkg);
 

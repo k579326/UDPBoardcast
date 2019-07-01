@@ -15,9 +15,9 @@
 static void _finish_task(abs_task_t* task)
 {
     strcpy(task->errmsg, ssn_errmsg(task->err));
-    // ÕÒµ½ÈÎÎñ
+    // æ‰¾åˆ°ä»»åŠ¡
 
-    // É¾³ıÈÎÎñ
+    // åˆ é™¤ä»»åŠ¡
 
     // notify
     uv_sem_post(&task->notify);
@@ -33,12 +33,12 @@ void close_cb(uv_handle_t* handle)
         if (loop_type(handle->loop) == CLIENT_LOOP)
         {
             // client tcp free cache
-            // ÇåÀíÁ¬½ÓÖĞµÄÈÎÎñ£¬ÈÃÈÎÎñ·µ»Ø
-            // °ÑÁ¬½Ó´ÓloopÖĞÉ¾³ı£¬»Øµ÷Í¨Öª
+            // æ¸…ç†è¿æ¥ä¸­çš„ä»»åŠ¡ï¼Œè®©ä»»åŠ¡è¿”å›
+            // æŠŠè¿æ¥ä»loopä¸­åˆ é™¤ï¼Œå›è°ƒé€šçŸ¥
         }
         else if (loop_type(handle->loop) == SERVER_LOOP)
         {
-            // server tcp closed£¬server loop should stop
+            // server tcp closedï¼Œserver loop should stop
 
             
         }
@@ -78,6 +78,7 @@ static void write_cb(uv_write_t* req, int status)
 
     abs_task_t* task = (abs_task_t*)req->data;
     if (task->type == PUSH){
+        delete req->data;       // æ¨é€ä»»åŠ¡è¦é‡Šæ”¾
         delete req;
         return;
     }
@@ -95,7 +96,7 @@ static void write_cb(uv_write_t* req, int status)
         uv_timer_start(timer, timer_cb, rw_task->timeout, 0);
         timer->data = rw_task;
 
-        // ¶¨Ê±Æ÷¹Ø±ÕµÄÊ±ºòÔõÃ´ÊÍ·ÅÄØ£¿
+        // å®šæ—¶å™¨å…³é—­çš„æ—¶å€™æ€ä¹ˆé‡Šæ”¾å‘¢ï¼Ÿè¿˜éœ€è¦ä¸€ä¸ªå®šæ—¶å™¨çš„é˜Ÿåˆ—, æ ¹æ®ä»»åŠ¡IDè¿›è¡ŒåŒ¹é…å…³é—­
     }
 
     delete req;
@@ -217,7 +218,7 @@ exit:
 
 
 
-// ·şÎñ¶Ë¼àÌı»Øµ÷
+// æœåŠ¡ç«¯ç›‘å¬å›è°ƒ
 void listen_cb(uv_stream_t* server, int status)
 {
     int err = 0;
@@ -257,109 +258,189 @@ void listen_cb(uv_stream_t* server, int status)
     conn.info.ip = ip;
     conn.info.port = -1;    // do nothing
     
-    // ¼ì²éºÚ°×Ãûµ¥
+    // æ£€æŸ¥é»‘ç™½åå•
     if (0){
         uv_close((uv_handle_t*)conn.tcp.handle, close_cb);
         return;
     }
 
-    // °ÑÁ¬½ÓÌí¼ÓÖÁloopµÄÁ¬½Ó±í
+    // æŠŠè¿æ¥æ·»åŠ è‡³loopçš„è¿æ¥è¡¨
     //TOOD:
     
-    // ¸øÁ¬½Ó¹ÒÉÏ¶ÁÈ¡ÇëÇó
+    // ç»™è¿æ¥æŒ‚ä¸Šè¯»å–è¯·æ±‚
     uv_read_start((uv_stream_t*)conn.tcp.handle, alloc_cb, read_cb);
 
     return;
 }
 
-// ¿Í»§¶ËÁ¬½Ó»Øµ÷
+// å®¢æˆ·ç«¯è¿æ¥å›è°ƒ
 void connect_cb(uv_connect_t* req, int status)
 {
-    // ¼ì²éstatus
-    // ³É¹¦ÔòÁ¬½Ó±í£¬Í£Ö¹¼ÆÊ±Æ÷£¬½«½á¹ûĞ´µ½ÈÎÎñ¶ÓÁĞ
-    // ¸øÁ¬½Ó¹ÒÉÏ¶ÁÈ¡ÇëÇó
+    // æ£€æŸ¥status
+    // æˆåŠŸåˆ™è¿æ¥è¡¨ï¼Œåœæ­¢è®¡æ—¶å™¨ï¼Œå°†ç»“æœå†™åˆ°ä»»åŠ¡é˜Ÿåˆ—
+    uv_timer_stop();
 
+    // ç»™è¿æ¥æŒ‚ä¸Šè¯»å–è¯·æ±‚
+    uv_read_start((uv_stream_t*)req->handle, alloc_cb, read_cb);
+    delete req;
+
+    return;
 }
 
 
-static void do_write(abs_task_t* at)
+static int _do_write(uint16_t connId, string indata, abs_task_t* task)
 {
     int ret = 0;
-    rw_task_t* task = (rw_task_t*)at;
+    //rw_task_t* task = (rw_task_t*)at;
     uv_write_t* req = new uv_write_t;
 
-    tcp_conn_t* conn = cl_conn_find(task->connId);
-    // ¼ì²éÁ¬½Ó
+    tcp_conn_t* conn = cl_conn_find(connId);
+    // æ£€æŸ¥è¿æ¥
     if (!conn)
     {
         ret = -1;
-        task->common.err = ERR_CONN_NOT_EXIST;
+        task->err = ERR_CONN_NOT_EXIST;
         goto exit;
     }
 
     // build proto package
     uint8_t pkg_type;
-    if (task->common.type == asyn_task_type::RW){
+    if (task->type == async_task_type::RW){
         pkg_type = PKG_TYPE_COMMON;
     }
-    else if (task->common.type == asyn_task_type::PUSH){
+    else if (task->type == async_task_type::PUSH){
         pkg_type = PKG_TYPE_PUSH;
     }
     else{ 
         assert(0);
     }
 
-    // pkgĞèÒªÊÍ·ÅµÄ
-    comm_pkg_t* pkg = proto_build_package(task->indata.c_str(), task->indata.size(), pkg_type, task->common.taskId);
-    task->indata.assign((char*)pkg, pkg->length + sizeof(comm_pkg_t));
-    proto_release_package(pkg);
-    pkg = NULL;
+    // pkgéœ€è¦é‡Šæ”¾çš„
+    comm_pkg_t* pkg = proto_build_package(indata.c_str(), indata.size(), pkg_type, task->taskId);
+    // task->indata.assign((char*)pkg, pkg->length + sizeof(comm_pkg_t));
+    //pkg = NULL;
 
     uv_buf_t buf;
-    buf.base = (char*)task->indata.c_str();
-    buf.len = task->indata.size();
+    //buf.base = (char*)task->indata.c_str();
+    //buf.len = task->indata.size();
+
+    buf.base = (char*)pkg;
+    buf.len = pkg->length + sizeof(comm_pkg_t);
 
     req->data = task;
     ret = uv_write(req, (uv_stream_t*)&conn->tcp.handle, &buf, 1, write_cb);
+    proto_release_package(pkg);
+
     if (ret != 0)
     {
-        task->common.err = uverr_convert(ret);
+        task->err = uverr_convert(ret);
         goto exit;
     }
 
-    return;
-
 exit:
-    if (ret != 0){ 
+    if (ret != 0){
         delete req;
-        task->outdata.clear();
-        _finish_task((abs_task_t*)task);
     }
 
-    return;
+    return ret;
 }
+
+static int _do_connect(abs_task_t* task)
+{
+    int err;
+    comm_tcp_t conn;
+    conn_task_t* ct = (conn_task_t*)task;
+
+    err = create_clt_tcp(&conn);
+    if (0 != err)
+    {
+        task->err = err;
+        return -1;
+    }
+
+    uv_connect_t req;
+    sockaddr_in addr;
+
+    addr.sin_family = AF_INET;
+    addr.sin_port = ct->port;
+    inet_pton(AF_INET, ct->ip, &addr.sin_addr);
+
+    err = uv_tcp_connect(&req, conn.handle, (sockaddr*)&addr, connect_cb);
+    if (err != 0){
+        task->err = uverr_convert(err);
+        uv_close((uv_handle_t*)conn.handle, close_cb);
+        return -1;
+    }
+
+    // è®¡æ—¶å™¨å…³é—­æ—¶å¦‚ä½•é‡Šæ”¾éœ€è¦è€ƒè™‘
+    uv_timer_t* timer = new uv_timer_t;
+    uv_timer_init(conn.handle->loop, timer);
+    uv_timer_start(timer, timer_cb, ct->timeout, 0);
+    timer->data = ct;
+
+    // å¦‚æœè¿æ¥è¶…æ—¶ï¼Œtcp handleæ€ä¹ˆåŠ?
+
+    return 0;
+}
+
+static void _do_push(abs_task_t* task)
+{
+    int err = 0;
+    push_task_t* pushTask = (push_task_t*)task;
+
+    // è·å–æ‰€æœ‰å®¢æˆ·ç«¯è¿æ¥
+    for ()
+    {
+        push_task_t* elementTask = new push_task_t;
+        elementTask->common.type = async_task_type::PUSH;
+        if (_do_write(, pushTask->indata, (abs_task_t*)elementTask) != 0)
+        {
+            delete elementTask;
+        }
+    }
+
+    task->err = 0;  // æ¨é€ä»»åŠ¡æ²¡æœ‰é”™è¯¯
+}
+
 
 void async_cb(uv_async_t* handle)
 {
+    int err;
     abs_task_t* task = (abs_task_t*)handle->data;
 
     switch (task->type)
     {
-    case asyn_task_type::RW:
+    case async_task_type::RW:
     {
-        do_write(task);
+        rw_task_t* rt = (rw_task_t*)rt;
+        err = _do_write(rt->connId, rt->indata, task);
+        if (err != 0)
+        {
+            _finish_task(task);
+        }
         break;
     }
-    case asyn_task_type::READ:
+    case async_task_type::READ:
     {
-        // Ã»ÓĞÕâ¸öÒì²½ÇëÇó°É£¿
+        // æ²¡æœ‰è¿™ä¸ªå¼‚æ­¥è¯·æ±‚å§ï¼Ÿ
         break;
     }
-    case asyn_task_type::CONNECT:
+    case async_task_type::PUSH:
     {
+        _do_push(task);
+        _finish_task(task);
+    }
+    case async_task_type::CONNECT:
+    {
+        err = _do_connect(task);
+        if (err != 0){
+            _finish_task(task);
+        }
         break;
     }
-
+    default:
+        assert(0);
+        break;
     }
 
     uv_close((uv_handle_t*)handle, close_cb);

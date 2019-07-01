@@ -36,7 +36,7 @@ void listen_cb(uv_stream_t* server, int status)
 
     uv_write(req, (uv_stream_t*)&client, &buf, 1, write_cb);
 
-    uv_run(&client_loop, UV_RUN_ONCE);
+    // uv_run(&client_loop, UV_RUN_ONCE);
 
     return;
 }
@@ -65,7 +65,7 @@ int server()
     //uv_timer_init(&loop, t);
     //uv_timer_start(t, timer_cb, 100000, 0);
     uv_listen((uv_stream_t*)&handle, 1, listen_cb);
-    uv_close((uv_handle_t*)& handle, NULL);
+    // uv_close((uv_handle_t*)& handle, NULL);
     
     while (1)
     {
@@ -73,7 +73,7 @@ int server()
 
         uv_run(&loop, UV_RUN_ONCE);
 
-        ret = uv_loop_close(&loop);
+        //ret = uv_loop_close(&loop);
     }
 
     getchar();

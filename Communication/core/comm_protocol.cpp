@@ -21,7 +21,7 @@ comm_pkg_t* proto_build_package(const void* buf, int buflen, uint8_t pkgType, ui
 
 comm_pkg_t* proto_parse_package(void** buf, int* remainSize)
 {
-    // ±ØÐëÓÐÕâ¸öÅÐ¶Ï
+    // å¿…é¡»æœ‰è¿™ä¸ªåˆ¤æ–­
     if (*remainSize < sizeof(comm_pkg_t))
     {
         return NULL;

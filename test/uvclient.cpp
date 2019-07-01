@@ -53,11 +53,11 @@ int client()
 
     uv_connect_t ct;
     uv_tcp_connect(&ct, &handle, (sockaddr*)& addr, conn_cb);
-    uv_close((uv_handle_t*)&handle, NULL);
+    //uv_close((uv_handle_t*)&handle, NULL);
     while (1)
     {
         uv_run(&loop, UV_RUN_ONCE);
-        uv_loop_close(&loop);
+        //uv_loop_close(&loop);
 
         Sleep(200);
     }

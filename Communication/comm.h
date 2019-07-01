@@ -8,8 +8,8 @@
 
 int client_start();
 
-// Èç¹û·µ»Ø0£¬±íÊ¾³É¹¦£¬*outdataÖ¸ÏòµÄÄÚ´æĞèÒªÊ¹ÓÃfreeÊÍ·Å£»Èç¹û·µ»Ø·Ç0£¬*outdata²»ĞèÒªÊÍ·Å
-// Èç¹ûtimeout±»ÉèÖÃÎª0£¬±íÊ¾ºöÂÔ³¬Ê±ÉèÖÃ
+// å¦‚æœè¿”å›0ï¼Œè¡¨ç¤ºæˆåŠŸï¼Œ*outdataæŒ‡å‘çš„å†…å­˜éœ€è¦ä½¿ç”¨freeé‡Šæ”¾ï¼›å¦‚æœè¿”å›é0ï¼Œ*outdataä¸éœ€è¦é‡Šæ”¾
+// å¦‚æœtimeoutè¢«è®¾ç½®ä¸º0ï¼Œè¡¨ç¤ºå¿½ç•¥è¶…æ—¶è®¾ç½®
 int ssn_send(uint16_t connId, const void* indata, int inlen, void** outdata, int* outlen, uint32_t timeout);
 int ssn_push(const void* indata, int inlen);
 
@@ -21,7 +21,7 @@ int client_stop();
 
 int server_start();
 
-// Ëø²å°Î
+// é”æ’æ‹”
 int send_dongle_change_msg();
 int regiester_task_cb();
 
