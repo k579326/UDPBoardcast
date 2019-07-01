@@ -26,7 +26,7 @@ static void _finish_task(abs_task_t* task)
 }
 
 
-static void close_cb(uv_handle_t* handle)
+void close_cb(uv_handle_t* handle)
 {
     if (handle->type == UV_TCP)
     {
@@ -39,7 +39,11 @@ static void close_cb(uv_handle_t* handle)
         else if (loop_type(handle->loop) == SERVER_LOOP)
         {
             // server tcp closed，server loop should stop
+
+            
         }
+
+        delete handle;
     }
     else if (handle->type == UV_TIMER)
     {
@@ -151,10 +155,16 @@ static void _read_content_process(uv_tcp_t* handle, int size, const void* conten
     if (info->type == CLIENT_LOOP){ 
         
         // handle task
+
+
+
     }
     else if (info->type == SERVER_LOOP)
     {
         // handle task
+
+
+
     }
     else
     {
@@ -206,6 +216,7 @@ exit:
 }
 
 
+
 // 服务端监听回调
 void listen_cb(uv_stream_t* server, int status)
 {
@@ -216,31 +227,49 @@ void listen_cb(uv_stream_t* server, int status)
         return;
     }
 
-    uv_tcp_t peer;
+    tcp_conn_t conn;
+    conn.tcp.handle = new uv_tcp_t;
+    conn.tcp.cache = NULL;
+    conn.tcp.length = 0;
+    conn.tcp.maxlength = 0;
+    conn.tcp.type = TCP_CLIENT;
 
-    err = uv_accept(server, (uv_stream_t*)& peer);
-    if (!err){
+    err = uv_accept(server, (uv_stream_t*)conn.tcp.handle);
+    if (0 != err){
+        delete conn.tcp.handle;
         err = uverr_convert(err);
         // TODO: LOG
         return;
     }
 
+    char ip[64];
     sockaddr_in addr;
     int addrlen = sizeof(addr);
-    uv_tcp_getpeername(&peer, (sockaddr*)&addr, &addrlen);
-
-    // 检查黑白名单
-    if (0){
-        uv_close((uv_handle_t*)&peer, NULL);
+    err = uv_tcp_getpeername(conn.tcp.handle, (sockaddr*)&addr, &addrlen);
+    if (0 != err){
+        uv_close((uv_handle_t*)conn.tcp.handle, close_cb);
+        err = uverr_convert(err);
+        // TODO: LOG
         return;
     }
 
-    // 添加客户端到连接表
+    inet_ntop(AF_INET, &addr, ip, 64);
+    conn.info.ip = ip;
+    conn.info.port = -1;    // do nothing
     
+    // 检查黑白名单
+    if (0){
+        uv_close((uv_handle_t*)conn.tcp.handle, close_cb);
+        return;
+    }
+
+    // 把连接添加至loop的连接表
+    //TOOD:
     
     // 给连接挂上读取请求
-    uv_read_start((uv_stream_t*)&peer, );
+    uv_read_start((uv_stream_t*)conn.tcp.handle, alloc_cb, read_cb);
 
+    return;
 }
 
 // 客户端连接回调
@@ -282,27 +311,23 @@ static void do_write(abs_task_t* at)
 
     // pkg需要释放的
     comm_pkg_t* pkg = proto_build_package(task->indata.c_str(), task->indata.size(), pkg_type, task->common.taskId);
-
-
-    // 没法释放pkg了？ 考虑把indata覆盖掉
-
-
-
-
-
+    task->indata.assign((char*)pkg, pkg->length + sizeof(comm_pkg_t));
+    proto_release_package(pkg);
+    pkg = NULL;
 
     uv_buf_t buf;
-    buf.base = (char*)pkg;
-    buf.len = sizeof(comm_pkg_t) + pkg->length;
+    buf.base = (char*)task->indata.c_str();
+    buf.len = task->indata.size();
 
     req->data = task;
     ret = uv_write(req, (uv_stream_t*)&conn->tcp.handle, &buf, 1, write_cb);
     if (ret != 0)
-    {// ret == EPIPE
-        proto_release_package(pkg);
+    {
         task->common.err = uverr_convert(ret);
         goto exit;
     }
+
+    return;
 
 exit:
     if (ret != 0){ 
@@ -313,14 +338,6 @@ exit:
 
     return;
 }
-
-static void do_read(abs_task_t* at)
-{
-    
-}
-
-
-
 
 void async_cb(uv_async_t* handle)
 {

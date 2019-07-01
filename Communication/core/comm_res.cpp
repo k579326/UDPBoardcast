@@ -112,9 +112,13 @@ int create_clt_tcp(comm_tcp_t* cltTcp)
     cltTcp->maxlength = 0;
     cltTcp->length = 0;
     cltTcp->type = TCP_CLIENT;
-    cltTcp->handle.data = cltTcp;
-    err = uv_tcp_init_ex(&g_ClientLoop.loop_info.loop, &cltTcp->handle, AF_INET);
+
+    cltTcp->handle = new uv_tcp_t;
+    cltTcp->handle->data = cltTcp;
+    err = uv_tcp_init_ex(&g_ClientLoop.loop_info.loop, cltTcp->handle, AF_INET);
     if (err != 0){ 
+        delete cltTcp->handle;
+        cltTcp->handle = NULL;
         err = uverr_convert(err);
     }
     return err;
@@ -152,32 +156,40 @@ static int _init_svr_tcp(comm_tcp_t* svrTcp)
     svrTcp->length = 0;
     svrTcp->cache = NULL;
     svrTcp->type = TCP_SERVER;
-    svrTcp->handle.data = svrTcp;
+
+    svrTcp->handle = new uv_tcp_t;
+    svrTcp->handle->data = svrTcp;
 
     sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.S_un.S_addr = PhyIpAddress();
     addr.sin_port = htonl(10038);
 
-    err = uv_tcp_init_ex(&g_serverLoop.loop_info.loop, &svrTcp->handle, AF_INET);
+    err = uv_tcp_init_ex(&g_serverLoop.loop_info.loop, svrTcp->handle, AF_INET);
     if (0 != err)
     {
+        delete svrTcp->handle;
         return uverr_convert(err);
     }
-    err = uv_tcp_bind(&svrTcp->handle, (sockaddr*)& addr, 0);
+    err = uv_tcp_bind(svrTcp->handle, (sockaddr*)& addr, 0);
     if (0 != err)
     {
-        uv_close((uv_handle_t*)& svrTcp->handle, NULL);
-        return uverr_convert(err);
+        goto exit;
     }
     err = uv_listen((uv_stream_t*)&svrTcp->handle, 1, listen_cb);
     if (0 != err)
     {
-        uv_close((uv_handle_t*)&svrTcp->handle, NULL);
-        return uverr_convert(err);
+        goto exit;
     }
 
     return 0;
+
+exit:
+
+    uv_close((uv_handle_t*)svrTcp->handle, close_cb);
+    uv_run(&g_serverLoop.loop_info.loop, UV_RUN_ONCE);
+
+    return uverr_convert(err);
 }
 
 

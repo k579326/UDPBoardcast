@@ -24,7 +24,7 @@ typedef enum
 
 typedef struct
 {
-    uv_tcp_t    handle;
+    uv_tcp_t*   handle;
     tcp_type_t  type;
     void*       cache;
     int         maxlength;  // cache max length
