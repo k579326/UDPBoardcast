@@ -65,7 +65,7 @@ typedef struct
 {
     abs_task_t      common;
     uint32_t        timeout;        // 超时时间：ms
-    //uv_timer_t      timer;
+    comm_tcp_t*     conn;           // 连接
     char            ip[64];
     short           port;           // 主机序
 }conn_task_t;
