@@ -54,6 +54,7 @@ void init_client_loop()
     g_ClientLoop.loop_info.running = false;
 	uv_rwlock_init(&g_ClientLoop.connTable.connLock);
 	uv_mutex_init(&g_ClientLoop.taskTable.taskLock);
+    uv_mutex_init(&g_ClientLoop.timerTable.timerLock);
 
     uv_mutex_init(&g_ClientLoop.condlock);
     uv_cond_init(&g_ClientLoop.cond);

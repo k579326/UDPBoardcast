@@ -32,6 +32,14 @@ typedef struct
 }comm_tcp_t;
 
 
+
+
+typedef struct
+{
+    abs_task_t* task;
+    uv_timer_t* timer;
+}timer_data_t;
+
 typedef struct
 {
     comm_tcp_t  tcp;
@@ -48,6 +56,12 @@ typedef struct{
 	uv_mutex_t taskLock;
 }safe_task_table;
 
+typedef struct
+{
+    std::map<uint64_t, timer_data_t*> timerTable;
+    uv_mutex_t timerLock;
+}safe_timer_table;
+
 
 struct loop_info_t
 {
@@ -63,7 +77,7 @@ struct client_loop_t
 
 	safe_conn_table connTable;
 	safe_task_table taskTable;
-	
+    safe_timer_table timerTable;
 	
 	uv_thread_t thread;
     uv_mutex_t  condlock;
@@ -96,16 +110,19 @@ loop_type_t loop_type(uv_loop_t* loop);
 int create_clt_tcp(comm_tcp_t* clt_tcp);
 
 
-int cl_conn_add();
-tcp_conn_t* cl_conn_del();
+int cl_conn_add(uint16_t connId, const tcp_conn_t* conn);
+tcp_conn_t* cl_conn_del(uint16_t connId);
 tcp_conn_t* cl_conn_find(uint16_t connId);
 
 
 
-int cl_task_add(const abs_task_t* task);
+int cl_task_add(uint64_t taskId, const abs_task_t* task);
 abs_task_t* cl_task_del(uint64_t taskId);
 abs_task_t* cl_task_find(uint64_t taskId);
 
+int cl_timer_add(uint64_t taskId, const timer_data_t* timer);
+timer_data_t* cl_timer_del(uint64_t taskId);
+timer_data_t* cl_timer_find(uint64_t taskId);
 
 bool cl_conn_valid(uint16_t connId);
 
@@ -117,6 +134,14 @@ uv_async_t* cl_create_async();
 
 void init_server_loop();
 int uninit_server_loop();
+
+
+int sl_conn_add(uint16_t connId, const tcp_conn_t* conn);
+tcp_conn_t* sl_conn_del(uint16_t connId);
+tcp_conn_t* sl_conn_find(uint16_t connId);
+
+
+
 
 
 uv_loop_t* sl_loop();
