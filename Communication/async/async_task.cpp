@@ -73,15 +73,18 @@ int async_conn(char* ip, short port, uint32_t timeout)
 
     conn_task_t task;
 
-    task.timeout = 0;
+    task.timeout = timeout;
     strcpy(task.ip, ip);
     task.port = port;
     task.common.type = async_task_type::CONNECT;
-    task.common.taskId = ApplyTaskId();
+    uv_sem_init(&task.common.notify, 1);
+    uv_sem_wait(&task.common.notify);
+    task.common.taskId = ApplyTaskId(); 
     //uv_timer_init(comm_client_loop(), &task.timer);
 
     async->data = (void*)&task;
-
+    // 放入任务队列
+    cl_task_add(task.common.taskId, (abs_task_t*)&task);
     // 发送异步任务
     uv_async_send(async);
 
@@ -90,16 +93,44 @@ int async_conn(char* ip, short port, uint32_t timeout)
 
     if (task.common.err != 0)
     {
-        int ret = task.common.err;
         // LOG task.common.errmsg
     }
+    uv_sem_destroy(&task.common.notify);
 
-    return 0;
+    return task.common.err;
 }
 
 int async_push(const void* indata, int inlen)
 {
+    uv_async_t* async = cl_create_async();
+    if (!async)
+    {
+        return ERR_NOT_READY;
+    }
 
+    push_task_t task;
+
+    task.common.type = async_task_type::CONNECT;
+    task.common.taskId = ApplyTaskId();
+    uv_sem_init(&task.common.notify, 1);
+    uv_sem_wait(&task.common.notify);
+    //uv_timer_init(comm_client_loop(), &task.timer);
+
+    async->data = (void*)& task;
+    // 放入任务队列
+    cl_task_add(task.common.taskId, (abs_task_t*)& task);
+    // 发送异步任务
+    uv_async_send(async);
+
+    // 等待处理完成
+    uv_sem_wait(&task.common.notify);
+
+    if (task.common.err != 0)
+    {
+        // LOG task.common.errmsg
+    }
+    uv_sem_destroy(&task.common.notify);
+    return task.common.err;
 }
 
 

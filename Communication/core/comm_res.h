@@ -24,7 +24,7 @@ typedef enum
 
 typedef struct
 {
-    uv_tcp_t*   handle;
+    uv_tcp_t    handle;
     tcp_type_t  type;
     void*       cache;
     int         maxlength;  // cache max length
@@ -42,6 +42,7 @@ typedef struct
 
 typedef struct
 {
+    uint16_t    connId;
     comm_tcp_t  tcp;
     peer_info_t	info;
 }tcp_conn_t;
@@ -52,13 +53,13 @@ typedef struct{
 }safe_conn_table;
 
 typedef struct{
-	std::map<uint64_t, abs_task_t*> taskTable;
+	std::map<uint64_t, abs_task_t*> table;
 	uv_mutex_t taskLock;
 }safe_task_table;
 
 typedef struct
 {
-    std::map<uint64_t, timer_data_t*> timerTable;
+    std::map<uint64_t, timer_data_t*> table;
     uv_mutex_t timerLock;
 }safe_timer_table;
 
@@ -91,7 +92,7 @@ struct server_loop_t
     safe_conn_table connTable;
 
     uv_thread_t thread;
-    comm_tcp_t  listen;
+    uv_tcp_t    listen;
 };
 
 
@@ -106,15 +107,15 @@ loop_type_t loop_type(uv_loop_t* loop);
 
 
 
+int init_tcp_conn(loop_type_t type, tcp_conn_t* clt_tcp);
 
-int create_clt_tcp(comm_tcp_t* clt_tcp);
 
-
-int cl_conn_add(uint16_t connId, const tcp_conn_t* conn);
+int cl_conn_add(uint16_t connId, tcp_conn_t* conn);
 tcp_conn_t* cl_conn_del(uint16_t connId);
+void cl_conn_del2(const tcp_conn_t* conn);
 tcp_conn_t* cl_conn_find(uint16_t connId);
 std::map<uint16_t, tcp_conn_t*> cl_conn_list();
-
+bool cl_conn_valid(uint16_t connId);
 
 int cl_task_add(uint64_t taskId, const abs_task_t* task);
 abs_task_t* cl_task_del(uint64_t taskId);
@@ -124,7 +125,7 @@ int cl_timer_add(uint64_t taskId, const timer_data_t* timer);
 timer_data_t* cl_timer_del(uint64_t taskId);
 timer_data_t* cl_timer_find(uint64_t taskId);
 
-bool cl_conn_valid(uint16_t connId);
+
 
 uv_loop_t* cl_loop();
 uv_async_t* cl_create_async();
@@ -133,16 +134,15 @@ uv_async_t* cl_create_async();
 
 
 void init_server_loop();
+int start_server_loop();
 int uninit_server_loop();
 
 
-int sl_conn_add(uint16_t connId, const tcp_conn_t* conn);
+int sl_conn_add(uint16_t connId, tcp_conn_t* conn);
 tcp_conn_t* sl_conn_del(uint16_t connId);
+void sl_conn_del2(const tcp_conn_t* conn);
 tcp_conn_t* sl_conn_find(uint16_t connId);
-
-
-
-
+std::map<uint16_t, tcp_conn_t*> sl_conn_list();
 
 uv_loop_t* sl_loop();
 uv_async_t* sl_create_async();

@@ -5,6 +5,22 @@
 #include "comm_define.h"
 #include "async/async_task.h"
 #include "ssnet_err.h"
+#include "Communication/core/comm_res.h"
+
+int ssn_startup_client()
+{
+    init_client_loop();
+    start_client_loop();
+    return 0;
+}
+
+int ssn_startup_server()
+{
+    init_server_loop();
+    start_server_loop();
+    return 0;
+}
+
 
 int ssn_send(uint16_t connId, const void* indata, int inlen, void** outdata, int* outlen, uint32_t timeout)
 {

@@ -4,7 +4,6 @@
 #include <vector>
 #include <queue>
 #include "comm_core.h"
-#include "conn_table.h"
 #include "comm_define.h"
 #include "sysheader.h"
 #include "comm_res.h"
@@ -31,7 +30,6 @@ void close_cb(uv_handle_t* handle)
 
         }
 
-        delete handle;
     }
     else if (handle->type == UV_TIMER)
     {
@@ -239,6 +237,16 @@ static void read_cb(uv_stream_t* stream,
         err = uverr_convert(nread);
         uv_close((uv_handle_t*)stream, close_cb);
 
+        tcp_conn_t* conn = (tcp_conn_t*)stream->data;
+        loop_type_t type = loop_type(stream->loop);
+        if (type == CLIENT_LOOP){
+            cl_conn_del2(conn);
+        }
+        else
+        {
+            sl_conn_del2(conn);
+        }
+
         goto exit;
     }
 
@@ -263,15 +271,17 @@ void listen_cb(uv_stream_t* server, int status)
     }
 
     tcp_conn_t* conn = new tcp_conn_t;
-    conn->tcp.handle = new uv_tcp_t;
-    conn->tcp.cache = NULL;
-    conn->tcp.length = 0;
-    conn->tcp.maxlength = 0;
-    conn->tcp.type = TCP_CLIENT;
 
-    err = uv_accept(server, (uv_stream_t*)conn->tcp.handle);
+    err = init_tcp_conn(SERVER_LOOP, conn);
+    if (err != 0)
+    {
+        delete conn;
+        err = uverr_convert(status);
+        // TODO: LOG
+        return;
+    }
+    err = uv_accept(server, (uv_stream_t*)&conn->tcp.handle);
     if (0 != err){
-        delete conn->tcp.handle;
         delete conn;
         err = uverr_convert(err);
         // TODO: LOG
@@ -281,9 +291,9 @@ void listen_cb(uv_stream_t* server, int status)
     char ip[64];
     sockaddr_in addr;
     int addrlen = sizeof(addr);
-    err = uv_tcp_getpeername(conn->tcp.handle, (sockaddr*)&addr, &addrlen);
+    err = uv_tcp_getpeername(&conn->tcp.handle, (sockaddr*)&addr, &addrlen);
     if (0 != err){
-        uv_close((uv_handle_t*)conn->tcp.handle, close_cb);
+        uv_close((uv_handle_t*)&conn->tcp.handle, close_cb);
         err = uverr_convert(err);
         delete conn;
         // TODO: LOG
@@ -296,7 +306,7 @@ void listen_cb(uv_stream_t* server, int status)
     
     // 检查黑白名单
     if (0){
-        uv_close((uv_handle_t*)conn->tcp.handle, close_cb);
+        uv_close((uv_handle_t*)&conn->tcp.handle, close_cb);
         delete conn;
         return;
     }
@@ -306,26 +316,16 @@ void listen_cb(uv_stream_t* server, int status)
     sl_conn_add(connId, conn);
 
     // 给连接挂上读取请求
-    uv_read_start((uv_stream_t*)conn->tcp.handle, alloc_cb, read_cb);
+    uv_read_start((uv_stream_t*)&conn->tcp.handle, alloc_cb, read_cb);
 
     return;
 }
 
 
-static int _do_write(uint16_t connId, string indata, abs_task_t* task)
+static int _do_write(tcp_conn_t* conn, string indata, abs_task_t* task)
 {
     int ret = 0;
-    //rw_task_t* task = (rw_task_t*)at;
     uv_write_t* req = new uv_write_t;
-
-    tcp_conn_t* conn = cl_conn_find(connId);
-    // 检查连接
-    if (!conn)
-    {
-        ret = -1;
-        task->err = ERR_CONN_NOT_EXIST;
-        goto exit;
-    }
 
     // build proto package
     uint8_t pkg_type;
@@ -341,13 +341,7 @@ static int _do_write(uint16_t connId, string indata, abs_task_t* task)
 
     // pkg需要释放的
     comm_pkg_t* pkg = proto_build_package(indata.c_str(), indata.size(), pkg_type, task->taskId);
-    // task->indata.assign((char*)pkg, pkg->length + sizeof(comm_pkg_t));
-    //pkg = NULL;
-
     uv_buf_t buf;
-    //buf.base = (char*)task->indata.c_str();
-    //buf.len = task->indata.size();
-
     buf.base = (char*)pkg;
     buf.len = pkg->length + sizeof(comm_pkg_t);
 
@@ -422,12 +416,8 @@ static int _do_connect(abs_task_t* task)
     reqData->task = ct;
     reqData->conn->info.ip = ct->ip;
     reqData->conn->info.port = ct->port;
-    reqData->conn->tcp.cache = NULL;
-    reqData->conn->tcp.length = 0;
-    reqData->conn->tcp.maxlength = 0;
-    reqData->conn->tcp.type = TCP_CLIENT;
 
-    err = create_clt_tcp(&reqData->conn->tcp);
+    err = init_tcp_conn(CLIENT_LOOP, reqData->conn);
     if (0 != err)
     {
         delete reqData->conn;
@@ -440,15 +430,15 @@ static int _do_connect(abs_task_t* task)
     sockaddr_in addr;
 
     addr.sin_family = AF_INET;
-    addr.sin_port = htonl(ct->port);
+    addr.sin_port = htons(ct->port);
     inet_pton(AF_INET, ct->ip, &addr.sin_addr);
 
     req->data = reqData;
 
-    err = uv_tcp_connect(req, reqData->conn->tcp.handle, (sockaddr*)&addr, connect_cb);
+    err = uv_tcp_connect(req, &reqData->conn->tcp.handle, (sockaddr*)&addr, connect_cb);
     if (err != 0){
         task->err = uverr_convert(err);
-        uv_close((uv_handle_t*)reqData->conn->tcp.handle, close_cb);
+        uv_close((uv_handle_t*)&reqData->conn->tcp.handle, close_cb);
         delete reqData->conn;
         delete reqData;
         return -1;
@@ -475,19 +465,21 @@ static void _do_push(abs_task_t* task)
     push_task_t* pushTask = (push_task_t*)task;
 
     // 获取所有客户端连接
-    std::map<uint16_t, tcp_conn_t*> connList = cl_conn_list();
+    std::map<uint16_t, tcp_conn_t*> connList = sl_conn_list();
     for (std::map<uint16_t, tcp_conn_t*>::iterator it = connList.begin();
          it != connList.end(); it++)
     {
         push_task_t* elementTask = new push_task_t;
         elementTask->common.type = async_task_type::PUSH;
-        if (_do_write(it->first, pushTask->indata, (abs_task_t*)elementTask) != 0)
+        if (_do_write(it->second, pushTask->indata, (abs_task_t*)elementTask) != 0)
         {
             delete elementTask;
         }
     }
 
     task->err = 0;  // 推送任务没有错误
+    _finish_task(task);
+    return;
 }
 
 
@@ -501,8 +493,13 @@ void async_cb(uv_async_t* handle)
     case async_task_type::RW:
     {
         rw_task_t* rt = (rw_task_t*)rt;
-        err = _do_write(rt->connId, rt->indata, task);
-        if (err != 0)
+        tcp_conn_t* conn = cl_conn_find(rt->connId);
+        if (!conn)
+        {
+            task->err = ERR_CONN_NOT_EXIST;
+            _finish_task(task);
+        }
+        if (_do_write(conn, rt->indata, task) != 0)
         {
             _finish_task(task);
         }
