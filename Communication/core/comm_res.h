@@ -47,7 +47,7 @@ typedef struct
 }tcp_conn_t;
 
 typedef struct{
-	std::map<uint16_t, tcp_conn_t> table;
+	std::map<uint16_t, tcp_conn_t*> table;
 	uv_rwlock_t connLock;
 }safe_conn_table;
 
@@ -113,7 +113,7 @@ int create_clt_tcp(comm_tcp_t* clt_tcp);
 int cl_conn_add(uint16_t connId, const tcp_conn_t* conn);
 tcp_conn_t* cl_conn_del(uint16_t connId);
 tcp_conn_t* cl_conn_find(uint16_t connId);
-
+std::map<uint16_t, tcp_conn_t*> cl_conn_list();
 
 
 int cl_task_add(uint64_t taskId, const abs_task_t* task);

@@ -14,21 +14,6 @@
 
 
 
-
-static void _finish_task(abs_task_t* task)
-{
-    strcpy(task->errmsg, ssn_errmsg(task->err));
-    // 找到任务
-
-    // 删除任务
-
-    // notify
-    uv_sem_post(&task->notify);
-
-    return;
-}
-
-
 void close_cb(uv_handle_t* handle)
 {
     if (handle->type == UV_TCP)
@@ -43,7 +28,7 @@ void close_cb(uv_handle_t* handle)
         {
             // server tcp closed，server loop should stop
 
-            
+
         }
 
         delete handle;
@@ -63,6 +48,28 @@ void close_cb(uv_handle_t* handle)
 
     return;
 }
+
+
+static void _finish_task(abs_task_t* task)
+{
+    strcpy(task->errmsg, ssn_errmsg(task->err));
+    // 删除任务
+    cl_task_del(task->taskId);
+
+    timer_data_t* td;
+    if (td = cl_timer_find(task->taskId)){
+        uv_timer_stop(td->timer);
+        uv_close((uv_handle_t*)td->timer, close_cb);
+        delete td;
+        cl_timer_del(task->taskId);
+    }
+
+    // notify
+    uv_sem_post(&task->notify);
+
+    return;
+}
+
 
 
 static void timer_cb(uv_timer_t* handle)
@@ -468,11 +475,13 @@ static void _do_push(abs_task_t* task)
     push_task_t* pushTask = (push_task_t*)task;
 
     // 获取所有客户端连接
-    for ()
+    std::map<uint16_t, tcp_conn_t*> connList = cl_conn_list();
+    for (std::map<uint16_t, tcp_conn_t*>::iterator it = connList.begin();
+         it != connList.end(); it++)
     {
         push_task_t* elementTask = new push_task_t;
         elementTask->common.type = async_task_type::PUSH;
-        if (_do_write(, pushTask->indata, (abs_task_t*)elementTask) != 0)
+        if (_do_write(it->first, pushTask->indata, (abs_task_t*)elementTask) != 0)
         {
             delete elementTask;
         }
@@ -508,6 +517,7 @@ void async_cb(uv_async_t* handle)
     {
         _do_push(task);
         _finish_task(task);
+        break;
     }
     case async_task_type::CONNECT:
     {

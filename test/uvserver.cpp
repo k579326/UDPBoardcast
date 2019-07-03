@@ -3,6 +3,12 @@
 
 #include "uv.h"
 
+
+void close_cb(uv_handle_t* handle)
+{
+
+}
+
 void write_cb(uv_write_t* req, int status)
 {
     int x = 0;
@@ -34,6 +40,7 @@ void listen_cb(uv_stream_t* server, int status)
     uv_buf_t buf;
     buf = uv_buf_init("123456", 6);
 
+    Sleep(4000);
     uv_write(req, (uv_stream_t*)&client, &buf, 1, write_cb);
 
     // uv_run(&client_loop, UV_RUN_ONCE);
@@ -47,6 +54,24 @@ void timer_cb(uv_timer_t* handle)
     delete handle;
 }
 
+void async_cb(uv_async_t* handle)
+{
+
+}
+void thread_func(void* param)
+{
+    Sleep(2000);
+    uv_close((uv_handle_t*)param, close_cb);
+
+    // uv_async_t async;
+    // 
+    // uv_async_init(((uv_handle_t*)param)->loop, &async, async_cb);
+    // 
+    // uv_async_send(&async);
+    return;
+}
+
+
 int server()
 {
     uv_loop_t loop;
@@ -55,8 +80,8 @@ int server()
     uv_tcp_t handle;
     
     sockaddr_in addr;
-    uv_ip4_addr("192.168.52.1", 10038, &addr);
-
+    //uv_ip4_addr("192.168.52.1", 10038, &addr); 
+    uv_ip4_addr("192.168.0.229", 10038, &addr);
     uv_tcp_init_ex(&loop, &handle, AF_INET);
     
     uv_tcp_bind(&handle, (sockaddr*)&addr, 0);
@@ -67,10 +92,13 @@ int server()
     uv_listen((uv_stream_t*)&handle, 1, listen_cb);
     // uv_close((uv_handle_t*)& handle, NULL);
     
+    uv_thread_t thread;
+    // uv_thread_create(&thread, thread_func, &handle);
+
     while (1)
     {
         int ret;
-
+        
         uv_run(&loop, UV_RUN_ONCE);
 
         //ret = uv_loop_close(&loop);
