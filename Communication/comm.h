@@ -7,7 +7,7 @@
 #include "comm_define.h"
 
 int ssn_startup_client(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb);
-int ssn_startup_server();
+int ssn_startup_server(ssn_work_process_cb cb, size_t workthread_num);
 
 // 如果返回0，表示成功，*outdata指向的内存需要使用free释放；如果返回非0，*outdata不需要释放
 // 如果timeout被设置为0，表示忽略超时设置

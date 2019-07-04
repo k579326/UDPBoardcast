@@ -139,7 +139,7 @@ uv_async_t* cl_create_async();
 
 
 void init_server_loop();
-int start_server_loop(size_t workthread_num);
+int start_server_loop(ssn_work_process_cb cb, size_t workthread_num);
 int uninit_server_loop();
 
 

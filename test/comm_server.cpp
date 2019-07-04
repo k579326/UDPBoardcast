@@ -1,27 +1,53 @@
 
-
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "Communication/comm.h"
 
 #include "uv.h"
 
+void _server_msg_handler(const void* indata, int inlen, void* outdata, int* outlen)
+{
+    char inbuf[256] = { 0 };
+    char outbuf[256] = { 0 };
+
+    memcpy(inbuf, indata, inlen);
+    memcpy(outbuf, (char*)indata, inlen);
+    strcat(outbuf, " ----> RESP!");
+    memcpy(outdata, outbuf, strlen(outbuf));
+
+    printf("[server recv msg] recv: {%s}, len: %d. send: {%s}, len: %d\n", 
+           inbuf, inlen, outbuf, (int)strlen(outbuf));
+
+    *outlen = strlen(outbuf);
+    return;
+}
+
 
 void server_thread(void* param)
 {
-
+    char pushmsg[] = "push msg!";
+    while (1)
+    {
+        ssn_push(pushmsg, strlen(pushmsg));
+        Sleep(2000);
+    }
 }
 
 
 int main()
 {
+    uv_thread_t thread;
+
     uv_sem_t sem;
     uv_sem_init(&sem, 1);
     uv_sem_wait(&sem);
-    ssn_startup_server();
+    ssn_startup_server(_server_msg_handler, 8);
 
+    uv_thread_create(&thread, server_thread, NULL);
 
     uv_sem_wait(&sem);
-
 
 
     return 0;

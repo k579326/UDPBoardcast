@@ -6,5 +6,5 @@ include_directories(./)
 
 add_library(comm_core comm.cpp comm.h ${SELECTADDRSRC} ${COMMCoreSRC} ${ASYNCSRC})
 
-target_link_libraries(comm_core libuv)
+target_link_libraries(comm_core libuv threadpool queue)
 

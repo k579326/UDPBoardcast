@@ -14,10 +14,10 @@ int ssn_startup_client(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
     return 0;
 }
 
-int ssn_startup_server()
+int ssn_startup_server(ssn_work_process_cb cb, size_t workthread_num)
 {
     init_server_loop();
-    start_server_loop();
+    start_server_loop(cb, workthread_num);
     return 0;
 }
 

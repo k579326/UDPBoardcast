@@ -48,6 +48,7 @@ typedef struct
     abs_task_t      common;
     uint16_t        connId;
     string          data;
+    ssn_work_process_cb cb;
 }resp_task_t;
 
 // W&R

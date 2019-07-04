@@ -11,28 +11,34 @@
 #include "comm_protocol.h"
 #include "gen_id.h"
 
+#define MAX_RESP_BUF        (1024 * 1024 * 4)
 
-
-typedef struct
-{
-    uint16_t connId;
-    uint64_t taskId;
-    ssn_work_process_cb cb;
-    string data;
-}svr_work_param;
 
 void svr_work_cb(void* param)
 {
-    svr_work_param* task = (svr_work_param*)param;
+    resp_task_t* task = (resp_task_t*)param;
 
-    resp_task_t* resp = new resp_task_t;
-    resp->common.taskId = task->taskId;
-    resp->connId = task->connId;
-    resp->common.type = RESP;
+    unsigned char* outbuf = new unsigned char[MAX_RESP_BUF];
+    int outlen = MAX_RESP_BUF;
+    if (task->cb)
+    {
+        task->cb(task->data.c_str(), task->data.size(), outbuf, &outlen);
+        task->data.assign((char*)outbuf, outlen);
+    }
+    delete[] outbuf;
 
-    uv_sem_init(&resp->common.notify, 1);
-    uv_sem_wait(&resp->common.notify);
+    uv_async_t* async = sl_create_async();
 
+    async->data = task;
+    uv_async_send(async);
+    uv_sem_wait(&task->common.notify);
+
+    // TODO: LOG
+    printf("[Svr Resp] task: %llu, errmsg: %s", task->common.taskId, task->common.errmsg);
+
+    uv_sem_destroy(&task->common.notify);
+    delete task;
+    return;
 }
 
 
@@ -83,20 +89,21 @@ void close_cb(uv_handle_t* handle)
 }
 
 
-static void _finish_task(abs_task_t* task)
+static void _cl_finish_task(abs_task_t* task)
 {
     strcpy(task->errmsg, ssn_errmsg(task->err));
-    // 删除任务
-    cl_task_del(task->taskId);
+    
 
-    timer_data_t* td;
-    if (td = cl_timer_find(task->taskId)){
+    cl_task_del(task->taskId);
+    timer_data_t* td = cl_timer_find(task->taskId);
+    if (td)
+    {
         uv_timer_stop(td->timer);
         uv_close((uv_handle_t*)td->timer, close_cb);
         delete td;
         cl_timer_del(task->taskId);
     }
-
+    
     // notify
     uv_sem_post(&task->notify);
 
@@ -104,6 +111,14 @@ static void _finish_task(abs_task_t* task)
 }
 
 
+static void _sl_finish_task(abs_task_t* task)
+{
+    strcpy(task->errmsg, ssn_errmsg(task->err));
+    // notify
+    uv_sem_post(&task->notify);
+
+    return;
+}
 
 static void timer_cb(uv_timer_t* handle)
 {
@@ -123,7 +138,7 @@ static void timer_cb(uv_timer_t* handle)
     uv_close((uv_handle_t*)handle, close_cb);
     
     data->task->err = ERR_TIMEOUT;
-    _finish_task(data->task);
+    _cl_finish_task(data->task);
     delete data->timer;
     //delete data->req;
     delete data;
@@ -144,11 +159,11 @@ static void write_cb(uv_write_t* req, int status)
     switch (task->type)
     {
     case RW:
-        if (!status)
+        if (0 != status)
         {
             ret = uverr_convert(status);
             task->err = ret;
-            _finish_task((abs_task_t*)task);
+            _cl_finish_task((abs_task_t*)task);
         }
         else
         {
@@ -169,8 +184,11 @@ static void write_cb(uv_write_t* req, int status)
     case PUSH:
         delete req->data;       // 推送任务要释放
         break;
-
-
+    case RESP:
+        ret = uverr_convert(status);
+        task->err = ret;
+        _sl_finish_task((abs_task_t*)task);
+        break;
     default:
         assert(0);
         break;
@@ -191,10 +209,11 @@ static void _server_handler_req(server_loop_t* svrLoop, uint16_t connId, uint64_
     task->connId = connId;
     task->common.taskId = taskId;
     task->data.assign((char*)data, len);
-  
+    task->cb = svrLoop->work_cb;
+
     int err = threadpool_push_work(svrLoop->pool, task, svr_work_cb, NULL);
     while (err == -1)
-    {// 队列已满，再次继续试，概率较小
+    {// 队列已满，再继续试，概率较小
         threadpool_push_work(svrLoop->pool, task, svr_work_cb, NULL);
     }
 
@@ -271,7 +290,7 @@ static void _read_content_process(uv_tcp_t* handle, int size, const void* conten
                     delete td;
                 }
                 
-                _finish_task((abs_task_t*)task);
+                _cl_finish_task((abs_task_t*)task);
             }
             else if (taskList[i]->type == PKG_TYPE_PUSH)
             {
@@ -292,7 +311,7 @@ static void _read_content_process(uv_tcp_t* handle, int size, const void* conten
         {
             if (taskList[i]->type == PKG_TYPE_COMMON)
             {
-                threadpool_push_work(,);
+                _server_handler_req(serverLoop, conn->connId, taskList[i]->taskId, taskList[i]->data, taskList[i]->length);
             }
             else if (taskList[i]->type == PKG_TYPE_ALIVE)
             {
@@ -443,7 +462,12 @@ static int _do_write(tcp_conn_t* conn, string& indata, abs_task_t* task)
     else if (task->type == async_task_type::PUSH){
         pkg_type = PKG_TYPE_PUSH;
     }
-    else{ 
+    else if (task->type == async_task_type::RESP)
+    {
+        pkg_type = PKG_TYPE_COMMON;
+    }
+    else
+    {
         assert(0);
     }
 
@@ -511,7 +535,7 @@ void connect_cb(uv_connect_t* req, int status)
     delete reqData;
     delete req;
 
-    _finish_task((abs_task_t*)task);
+    _cl_finish_task((abs_task_t*)task);
 
     return;
 }
@@ -590,7 +614,6 @@ static void _do_push(abs_task_t* task)
     }
 
     task->err = 0;  // 推送任务没有错误
-    _finish_task(task);
     return;
 }
 
@@ -604,35 +627,49 @@ void async_cb(uv_async_t* handle)
     {
     case async_task_type::RW:
     {
-        rw_task_t* rt = (rw_task_t*)rt;
+        rw_task_t* rt = (rw_task_t*)task;
         tcp_conn_t* conn = cl_conn_find(rt->connId);
         if (!conn)
         {
             task->err = ERR_CONN_NOT_EXIST;
-            _finish_task(task);
+            _cl_finish_task(task);
+            break;
         }
         if (_do_write(conn, rt->indata, task) != 0)
         {
-            _finish_task(task);
+            _cl_finish_task(task);
         }
         break;
     }
     case async_task_type::RESP:
     {
-        // 没有这个异步请求吧？
+        resp_task_t* resptask = (resp_task_t*)task;
+        tcp_conn_t* conn = sl_conn_find(resptask->connId);
+        if (!conn)
+        {
+            task->err = ERR_CONN_NOT_EXIST;
+            _sl_finish_task(task);
+            break;
+        }
+
+        err = _do_write(conn, resptask->data, task);
+        if (err != 0)
+        {
+            _sl_finish_task(task);
+        }
         break;
     }
     case async_task_type::PUSH:
     {
         _do_push(task);
-        _finish_task(task);
+        _sl_finish_task(task);
         break;
     }
     case async_task_type::CONNECT:
     {
         err = _do_connect(task);
         if (err != 0){
-            _finish_task(task);
+            _cl_finish_task(task);
         }
         break;
     }

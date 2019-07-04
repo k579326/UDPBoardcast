@@ -376,7 +376,7 @@ void init_server_loop()
     return;
 }
 
-int start_server_loop(size_t workthread_num)
+int start_server_loop(ssn_work_process_cb cb, size_t workthread_num)
 {
     int err;
     if (g_serverLoop.loop_info.running)
@@ -396,7 +396,7 @@ int start_server_loop(size_t workthread_num)
     g_serverLoop.listen.data = NULL; 
 
     threadpool_init(&g_serverLoop.pool, workthread_num);
-
+    g_serverLoop.work_cb = cb;
     uv_thread_create(&g_serverLoop.thread, _serverloop_process, &g_serverLoop);
     g_serverLoop.loop_info.running = true;
     

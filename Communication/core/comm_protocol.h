@@ -9,6 +9,7 @@
 #define PKG_TYPE_COMMON     1       // 普通数据包
 #define PKG_TYPE_PUSH       2       // 推送数据包
 
+
 #define COMM_PROTOCOL_VERSION_1   1
 #define COMM_PROTOCOL_VERSION_2   2   
 
