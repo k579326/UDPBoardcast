@@ -13,23 +13,58 @@
 
 
 
+typedef struct
+{
+    uint16_t connId;
+    uint64_t taskId;
+    ssn_work_process_cb cb;
+    string data;
+}svr_work_param;
+
+void svr_work_cb(void* param)
+{
+    svr_work_param* task = (svr_work_param*)param;
+
+    resp_task_t* resp = new resp_task_t;
+    resp->common.taskId = task->taskId;
+    resp->connId = task->connId;
+    resp->common.type = RESP;
+
+    uv_sem_init(&resp->common.notify, 1);
+    uv_sem_wait(&resp->common.notify);
+
+}
+
+
+
 void close_cb(uv_handle_t* handle)
 {
     if (handle->type == UV_TCP)
     {
-        if (loop_type(handle->loop) == CLIENT_LOOP)
+        tcp_conn_t* conn = (tcp_conn_t*)handle->data;
+        if (conn && conn->tcp.type == TCP_CLIENT)
         {
             // client tcp free cache
-            // 清理连接中的任务，让任务返回
+            delete[] conn->tcp.cache;
+            conn->tcp.cache = NULL;
+            conn->tcp.maxlength = 0;
+            conn->tcp.length = 0;
+
+            // 关闭回调执行是不是可以代表该连接的所有任务都结束了？
+
             // 把连接从loop中删除，回调通知
+            if (loop_type(handle->loop) == SERVER_LOOP)
+                sl_conn_del(conn->connId);
+            else
+            {
+                client_loop_t* loopInfo = (client_loop_t*)handle->loop->data;
+                cl_conn_del(conn->connId);
+                if (loopInfo->conn_cb)
+                    loopInfo->conn_cb(conn->connId, conn->info.ip.c_str(), false);
+            }
+                
         }
-        else if (loop_type(handle->loop) == SERVER_LOOP)
-        {
-            // server tcp closed，server loop should stop
-
-
-        }
-
+        delete handle->data;
     }
     else if (handle->type == UV_TIMER)
     {
@@ -105,30 +140,40 @@ static void write_cb(uv_write_t* req, int status)
     int ret = 0;
 
     abs_task_t* task = (abs_task_t*)req->data;
-    if (task->type == PUSH){
-        delete req->data;       // 推送任务要释放
-        delete req;
-        return;
-    }
 
-    if (!status){
-        ret = uverr_convert(status);
-        task->err = ret;
-        _finish_task((abs_task_t*)task);
-    }
-    else
+    switch (task->type)
     {
-        rw_task_t* rw_task = (rw_task_t*)task;
-        timer_data_t* td = new timer_data_t;
-        td->timer = new uv_timer_t;
-        uv_timer_init(req->handle->loop, td->timer);
-        uv_timer_start(td->timer, timer_cb, rw_task->timeout, 0);
-        td->timer->data = td;
-        td->task = (abs_task_t*)rw_task;
-        //td->req = NULL; // 这个req不需要，但是必须置为NULL
+    case RW:
+        if (!status)
+        {
+            ret = uverr_convert(status);
+            task->err = ret;
+            _finish_task((abs_task_t*)task);
+        }
+        else
+        {
+            rw_task_t* rw_task = (rw_task_t*)task;
+            timer_data_t* td = new timer_data_t;
+            td->timer = new uv_timer_t;
+            uv_timer_init(req->handle->loop, td->timer);
+            uv_timer_start(td->timer, timer_cb, rw_task->timeout, 0);
+            td->timer->data = td;
+            td->task = (abs_task_t*)rw_task;
+            //td->req = NULL; // 这个req不需要，但是必须置为NULL
 
-        // 定时器放到timer队列
-        cl_timer_add(task->taskId, td);
+            // 定时器放到timer队列
+            cl_timer_add(task->taskId, td);
+        }
+        break;
+
+    case PUSH:
+        delete req->data;       // 推送任务要释放
+        break;
+
+
+    default:
+        assert(0);
+        break;
     }
 
     delete req;
@@ -136,7 +181,26 @@ static void write_cb(uv_write_t* req, int status)
 }
 
 
+static void _server_handler_req(server_loop_t* svrLoop, uint16_t connId, uint64_t taskId, const void* data, int len)
+{
+    resp_task_t* task = new resp_task_t;
+    
+    uv_sem_init(&task->common.notify, 1);
+    uv_sem_wait(&task->common.notify);
+    task->common.type = RESP;
+    task->connId = connId;
+    task->common.taskId = taskId;
+    task->data.assign((char*)data, len);
+  
+    int err = threadpool_push_work(svrLoop->pool, task, svr_work_cb, NULL);
+    while (err == -1)
+    {// 队列已满，再次继续试，概率较小
+        threadpool_push_work(svrLoop->pool, task, svr_work_cb, NULL);
+    }
 
+
+    return;
+}
 
 
 static void _read_content_process(uv_tcp_t* handle, int size, const void* content)
@@ -149,18 +213,19 @@ static void _read_content_process(uv_tcp_t* handle, int size, const void* conten
     void* pkgs = NULL;
     void* cursor = NULL;
     int remainsize = 0;
-    comm_tcp_t* conn = (comm_tcp_t*)handle->data;
+    tcp_conn_t* conn = (tcp_conn_t*)handle->data;
+    comm_tcp_t* tcp = &conn->tcp;
     
-    pkgs = new char[conn->length + size];
-    if (conn->length != 0){ 
-        assert(conn->cache != NULL);
-        memcpy(pkgs, conn->cache, conn->length);
+    pkgs = new char[tcp->length + size];
+    if (tcp->length != 0){
+        assert(tcp->cache != NULL);
+        memcpy(pkgs, tcp->cache, tcp->length);
     }
 
-    memcpy((char*)pkgs + conn->length, content, size);
+    memcpy((char*)pkgs + tcp->length, content, size);
 
     cursor = pkgs;
-    remainsize = conn->length + size;
+    remainsize = tcp->length + size;
     while (1)
     {
         pkg = proto_parse_package(&cursor, &remainsize);
@@ -176,28 +241,68 @@ static void _read_content_process(uv_tcp_t* handle, int size, const void* conten
         taskList.push_back(pkg);
     }
 
-    if (conn->maxlength < remainsize){ 
-        delete[] conn->cache;
-        conn->cache = new char[remainsize];
-        conn->maxlength = remainsize;
+    if (tcp->maxlength < remainsize){
+        delete[] tcp->cache;
+        tcp->cache = new char[remainsize];
+        tcp->maxlength = remainsize;
     }
-    conn->length = remainsize;
-    memcpy(conn->cache, cursor, remainsize);
+    tcp->length = remainsize;
+    memcpy(tcp->cache, cursor, remainsize);
 
 
     if (info->type == CLIENT_LOOP){ 
         
         // handle task
+        client_loop_t* clientLoop = (client_loop_t*)info;
 
+        for (int i = 0; i < taskList.size(); i++)
+        {
+            if (taskList[i]->type == PKG_TYPE_COMMON)
+            {
+                rw_task_t* task = (rw_task_t*)cl_task_del(taskList[i]->taskId);
 
-
+                task->common.err = 0;
+                task->outdata.assign((char*)taskList[i]->data, taskList[i]->length);
+                timer_data_t* td = cl_timer_del(taskList[i]->taskId);
+                if (td)
+                {
+                    uv_timer_stop(td->timer);
+                    uv_close((uv_handle_t*)td->timer, close_cb);
+                    delete td;
+                }
+                
+                _finish_task((abs_task_t*)task);
+            }
+            else if (taskList[i]->type == PKG_TYPE_PUSH)
+            {
+                if (clientLoop->pushmsg_cb)
+                    clientLoop->pushmsg_cb(conn->connId, taskList[i]->data, taskList[i]->length);
+            }
+            else
+            {
+                assert(0);
+            }
+        }
     }
     else if (info->type == SERVER_LOOP)
     {
         // handle task
-
-
-
+        server_loop_t* serverLoop = (server_loop_t*)info;
+        for (int i = 0; i < taskList.size(); i++)
+        {
+            if (taskList[i]->type == PKG_TYPE_COMMON)
+            {
+                threadpool_push_work(,);
+            }
+            else if (taskList[i]->type == PKG_TYPE_ALIVE)
+            {
+                // TODO:
+            }
+            else
+            {
+                assert(0);
+            }
+        }
     }
     else
     {
@@ -228,6 +333,8 @@ static void read_cb(uv_stream_t* stream,
     int err = 0;
     char* pRemain = NULL;
 
+    tcp_conn_t* conn = (tcp_conn_t*)stream->data;
+
     if (nread == 0){
         goto exit;
     }
@@ -235,9 +342,9 @@ static void read_cb(uv_stream_t* stream,
     if (nread < 0){
 
         err = uverr_convert(nread);
+        uv_read_stop(stream);
         uv_close((uv_handle_t*)stream, close_cb);
 
-        tcp_conn_t* conn = (tcp_conn_t*)stream->data;
         loop_type_t type = loop_type(stream->loop);
         if (type == CLIENT_LOOP){
             cl_conn_del2(conn);
@@ -251,6 +358,7 @@ static void read_cb(uv_stream_t* stream,
     }
 
     _read_content_process((uv_tcp_t*)stream, nread, buf->base);
+
 
 exit:
     delete[] buf->base;
@@ -322,7 +430,7 @@ void listen_cb(uv_stream_t* server, int status)
 }
 
 
-static int _do_write(tcp_conn_t* conn, string indata, abs_task_t* task)
+static int _do_write(tcp_conn_t* conn, string& indata, abs_task_t* task)
 {
     int ret = 0;
     uv_write_t* req = new uv_write_t;
@@ -388,6 +496,10 @@ void connect_cb(uv_connect_t* req, int status)
         // 把连接添加至loop的连接表
         uint16_t connId = ApplyConnIdForClt();
         cl_conn_add(connId, reqData->conn);
+
+        client_loop_t* loopInfo = (client_loop_t*)req->handle->loop->data;
+        if (loopInfo->conn_cb)
+            loopInfo->conn_cb(connId, reqData->conn->info.ip.c_str(), true);
 
         // 给连接挂上读取请求
         uv_read_start((uv_stream_t*)req->handle, alloc_cb, read_cb);
@@ -505,7 +617,7 @@ void async_cb(uv_async_t* handle)
         }
         break;
     }
-    case async_task_type::READ:
+    case async_task_type::RESP:
     {
         // 没有这个异步请求吧？
         break;
@@ -533,5 +645,4 @@ void async_cb(uv_async_t* handle)
 
     return;
 }
-
 

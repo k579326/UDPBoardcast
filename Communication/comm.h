@@ -4,9 +4,9 @@
 #pragma once
 
 #include <stdint.h>
+#include "comm_define.h"
 
-
-int ssn_startup_client();
+int ssn_startup_client(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb);
 int ssn_startup_server();
 
 // 如果返回0，表示成功，*outdata指向的内存需要使用free释放；如果返回非0，*outdata不需要释放
@@ -15,13 +15,11 @@ int ssn_send(uint16_t connId, const void* indata, int inlen, void** outdata, int
 int ssn_push(const void* indata, int inlen);
 int ssn_connect(char* ip, short port, uint32_t timeout);
 
-int regiester_dongle_changed_cb();
-int regiester_connect_changed_cb();
-int client_stop();
+
+int regiester_pushmsg_cb(ssn_pushmsg_cb cb);
+int regiester_connect_changed_cb(ssn_conn_changed_cb cb);
 
 
-
-int server_start();
 
 // 锁插拔
 int send_dongle_change_msg();

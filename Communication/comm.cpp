@@ -7,9 +7,9 @@
 #include "ssnet_err.h"
 #include "Communication/core/comm_res.h"
 
-int ssn_startup_client()
+int ssn_startup_client(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
 {
-    init_client_loop();
+    init_client_loop(pushmsg_cb, conn_cb);
     start_client_loop();
     return 0;
 }

@@ -8,6 +8,7 @@
 
 #include "ssnet_define.h"
 #include "comm_define.h"
+#include "threadpool.h"
 
 typedef enum
 {
@@ -83,6 +84,9 @@ struct client_loop_t
 	uv_thread_t thread;
     uv_mutex_t  condlock;
     uv_cond_t   cond;
+
+    ssn_pushmsg_cb pushmsg_cb;
+    ssn_conn_changed_cb conn_cb;
 };
 
 struct server_loop_t
@@ -91,13 +95,16 @@ struct server_loop_t
 
     safe_conn_table connTable;
 
+    threadpool_t* pool;
     uv_thread_t thread;
     uv_tcp_t    listen;
+
+    ssn_work_process_cb work_cb;
 };
 
 
 
-void init_client_loop();
+void init_client_loop(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb);
 int uninit_client_loop();
 int start_client_loop();
 int stop_client_loop();
@@ -105,9 +112,7 @@ int stop_client_loop();
 loop_type_t loop_type(uv_loop_t* loop);
 
 
-
-
-int init_tcp_conn(loop_type_t type, tcp_conn_t* clt_tcp);
+int init_tcp_conn(loop_type_t type, tcp_conn_t* conn);
 
 
 int cl_conn_add(uint16_t connId, tcp_conn_t* conn);
@@ -134,7 +139,7 @@ uv_async_t* cl_create_async();
 
 
 void init_server_loop();
-int start_server_loop();
+int start_server_loop(size_t workthread_num);
 int uninit_server_loop();
 
 

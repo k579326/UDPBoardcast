@@ -44,7 +44,7 @@ static void _serverloop_process(void* param)
 }
 
 
-void init_client_loop()
+void init_client_loop(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
 {
 	uv_loop_init(&g_ClientLoop.loop_info.loop);
 	
@@ -61,6 +61,8 @@ void init_client_loop()
 	// uv_thread_create(&g_ClientLoop->thread, NULL, &g_ClientLoop);
 	
     g_ClientLoop.loop_info.loop.data = &g_ClientLoop;
+    g_ClientLoop.pushmsg_cb = pushmsg_cb;
+    g_ClientLoop.conn_cb = conn_cb;
 
     return;
 }
@@ -374,7 +376,7 @@ void init_server_loop()
     return;
 }
 
-int start_server_loop()
+int start_server_loop(size_t workthread_num)
 {
     int err;
     if (g_serverLoop.loop_info.running)
@@ -391,6 +393,9 @@ int start_server_loop()
     if (err != 0){
         return -1;
     }
+    g_serverLoop.listen.data = NULL; 
+
+    threadpool_init(&g_serverLoop.pool, workthread_num);
 
     uv_thread_create(&g_serverLoop.thread, _serverloop_process, &g_serverLoop);
     g_serverLoop.loop_info.running = true;
@@ -513,7 +518,6 @@ uv_loop_t* sl_loop()
 {
     return &g_serverLoop.loop_info.loop;
 }
-
 
 
 
