@@ -17,7 +17,7 @@ void _server_msg_handler(const void* indata, int inlen, void* outdata, int* outl
     strcat(outbuf, " ----> RESP!");
     memcpy(outdata, outbuf, strlen(outbuf));
 
-    printf("[server recv msg] recv: {%s}, len: %d. send: {%s}, len: %d\n", 
+    printf("[Recv Msg] recv: {%s}, len: %d. send: {%s}, len: %d\n", 
            inbuf, inlen, outbuf, (int)strlen(outbuf));
 
     *outlen = strlen(outbuf);
@@ -30,7 +30,7 @@ void server_thread(void* param)
     char pushmsg[] = "push msg!";
     while (1)
     {
-        ssn_push(pushmsg, strlen(pushmsg));
+        //ssn_push(pushmsg, strlen(pushmsg));
         Sleep(2000);
     }
 }
@@ -40,15 +40,19 @@ int main()
 {
     uv_thread_t thread;
 
-    uv_sem_t sem;
-    uv_sem_init(&sem, 1);
-    uv_sem_wait(&sem);
-    ssn_startup_server(_server_msg_handler, 8);
+    ssn_startup_server(_server_msg_handler, 16);
 
     uv_thread_create(&thread, server_thread, NULL);
 
-    uv_sem_wait(&sem);
 
+
+
+
+
+    uv_sem_t sem;
+    uv_sem_init(&sem, 1);
+    uv_sem_wait(&sem);
+    uv_sem_wait(&sem);
 
     return 0;
 }

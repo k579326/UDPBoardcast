@@ -33,9 +33,6 @@ void svr_work_cb(void* param)
     uv_async_send(async);
     uv_sem_wait(&task->common.notify);
 
-    // TODO: LOG
-    printf("[Svr Resp] task: %llu, errmsg: %s", task->common.taskId, task->common.errmsg);
-
     uv_sem_destroy(&task->common.notify);
     delete task;
     return;
@@ -68,13 +65,13 @@ void close_cb(uv_handle_t* handle)
                 if (loopInfo->conn_cb)
                     loopInfo->conn_cb(conn->connId, conn->info.ip.c_str(), false);
             }
-                
         }
         delete handle->data;
+        // delete handle;
     }
     else if (handle->type == UV_TIMER)
     {
-        delete handle;
+        delete handle->data;
     }
     else if (handle->type == UV_ASYNC)
     {
@@ -88,6 +85,13 @@ void close_cb(uv_handle_t* handle)
     return;
 }
 
+static void _safe_uv_close(uv_handle_t* handle, uv_close_cb cb)
+{
+    if (!uv_is_closing(handle))
+        uv_close(handle, cb);
+    return;
+}
+
 
 static void _cl_finish_task(abs_task_t* task)
 {
@@ -98,9 +102,8 @@ static void _cl_finish_task(abs_task_t* task)
     timer_data_t* td = cl_timer_find(task->taskId);
     if (td)
     {
-        uv_timer_stop(td->timer);
-        uv_close((uv_handle_t*)td->timer, close_cb);
-        delete td;
+        uv_timer_stop(&td->timer);
+        _safe_uv_close((uv_handle_t*)&td->timer, close_cb);
         cl_timer_del(task->taskId);
     }
     
@@ -134,15 +137,12 @@ static void timer_cb(uv_timer_t* handle)
     //     delete reqData->conn;
     //     delete reqData;
     // }
-
-    uv_close((uv_handle_t*)handle, close_cb);
+    _safe_uv_close((uv_handle_t*)handle, close_cb);
     
     data->task->err = ERR_TIMEOUT;
     _cl_finish_task(data->task);
-    delete data->timer;
+    //delete data->timer;
     //delete data->req;
-    delete data;
-
     data->task = NULL;
     //data->req = NULL;
 
@@ -168,16 +168,18 @@ static void write_cb(uv_write_t* req, int status)
         else
         {
             rw_task_t* rw_task = (rw_task_t*)task;
-            timer_data_t* td = new timer_data_t;
-            td->timer = new uv_timer_t;
-            uv_timer_init(req->handle->loop, td->timer);
-            uv_timer_start(td->timer, timer_cb, rw_task->timeout, 0);
-            td->timer->data = td;
-            td->task = (abs_task_t*)rw_task;
-            //td->req = NULL; // 这个req不需要，但是必须置为NULL
 
-            // 定时器放到timer队列
-            cl_timer_add(task->taskId, td);
+            if (rw_task->timeout > 0)
+            {
+                timer_data_t* td = new timer_data_t;
+                uv_timer_init(req->handle->loop, &td->timer);
+                uv_timer_start(&td->timer, timer_cb, rw_task->timeout, 0);
+                td->timer.data = td;
+                td->task = (abs_task_t*)rw_task;
+                // 定时器放到timer队列
+                cl_timer_add(task->taskId, td);
+            }
+            
         }
         break;
 
@@ -253,8 +255,10 @@ static void _read_content_process(uv_tcp_t* handle, int size, const void* conten
         }
 
         err = proto_check_pkg(pkg);
-        if (!err){ 
+        if (0 != err){ 
             // LOG;
+            printf("[BAD PACKAGE] package received is invalid!\n");
+            continue;
         }
 
         taskList.push_back(pkg);
@@ -279,18 +283,18 @@ static void _read_content_process(uv_tcp_t* handle, int size, const void* conten
             if (taskList[i]->type == PKG_TYPE_COMMON)
             {
                 rw_task_t* task = (rw_task_t*)cl_task_del(taskList[i]->taskId);
-
-                task->common.err = 0;
-                task->outdata.assign((char*)taskList[i]->data, taskList[i]->length);
                 timer_data_t* td = cl_timer_del(taskList[i]->taskId);
                 if (td)
                 {
-                    uv_timer_stop(td->timer);
-                    uv_close((uv_handle_t*)td->timer, close_cb);
-                    delete td;
+                    uv_timer_stop(&td->timer);
+                    _safe_uv_close((uv_handle_t*)&td->timer, close_cb);
                 }
-                
-                _cl_finish_task((abs_task_t*)task);
+                if (task)
+                {
+                    task->common.err = 0;
+                    task->outdata.assign((char*)taskList[i]->data, taskList[i]->length);
+                    _cl_finish_task((abs_task_t*)task);
+                }
             }
             else if (taskList[i]->type == PKG_TYPE_PUSH)
             {
@@ -307,19 +311,23 @@ static void _read_content_process(uv_tcp_t* handle, int size, const void* conten
     {
         // handle task
         server_loop_t* serverLoop = (server_loop_t*)info;
-        for (int i = 0; i < taskList.size(); i++)
+
+        if (sl_conn_find(conn->connId))
         {
-            if (taskList[i]->type == PKG_TYPE_COMMON)
+            for (int i = 0; i < taskList.size(); i++)
             {
-                _server_handler_req(serverLoop, conn->connId, taskList[i]->taskId, taskList[i]->data, taskList[i]->length);
-            }
-            else if (taskList[i]->type == PKG_TYPE_ALIVE)
-            {
-                // TODO:
-            }
-            else
-            {
-                assert(0);
+                if (taskList[i]->type == PKG_TYPE_COMMON)
+                {
+                    _server_handler_req(serverLoop, conn->connId, taskList[i]->taskId, taskList[i]->data, taskList[i]->length);
+                }
+                else if (taskList[i]->type == PKG_TYPE_ALIVE)
+                {
+                    // TODO:
+                }
+                else
+                {
+                    assert(0);
+                }
             }
         }
     }
@@ -362,22 +370,24 @@ static void read_cb(uv_stream_t* stream,
 
         err = uverr_convert(nread);
         uv_read_stop(stream);
-        uv_close((uv_handle_t*)stream, close_cb);
+        _safe_uv_close((uv_handle_t*)stream, close_cb);
 
-        loop_type_t type = loop_type(stream->loop);
-        if (type == CLIENT_LOOP){
+        loop_info_t* loopInfo = (loop_info_t*)stream->loop->data;
+        if (loopInfo->type == CLIENT_LOOP){
+            client_loop_t* clientLoop = (client_loop_t*)loopInfo;
             cl_conn_del2(conn);
+            if (clientLoop->conn_cb)
+                clientLoop->conn_cb(conn->connId, conn->info.ip.c_str(), false);
         }
         else
         {
             sl_conn_del2(conn);
         }
-
+        // delete conn;
         goto exit;
     }
 
     _read_content_process((uv_tcp_t*)stream, nread, buf->base);
-
 
 exit:
     delete[] buf->base;
@@ -420,7 +430,7 @@ void listen_cb(uv_stream_t* server, int status)
     int addrlen = sizeof(addr);
     err = uv_tcp_getpeername(&conn->tcp.handle, (sockaddr*)&addr, &addrlen);
     if (0 != err){
-        uv_close((uv_handle_t*)&conn->tcp.handle, close_cb);
+        _safe_uv_close((uv_handle_t*)&conn->tcp.handle, close_cb);
         err = uverr_convert(err);
         delete conn;
         // TODO: LOG
@@ -433,7 +443,7 @@ void listen_cb(uv_stream_t* server, int status)
     
     // 检查黑白名单
     if (0){
-        uv_close((uv_handle_t*)&conn->tcp.handle, close_cb);
+        _safe_uv_close((uv_handle_t*)&conn->tcp.handle, close_cb);
         delete conn;
         return;
     }
@@ -510,10 +520,10 @@ void connect_cb(uv_connect_t* req, int status)
 
     if (status != 0)
     {
-        uv_close((uv_handle_t*)req->handle, close_cb);
+        _safe_uv_close((uv_handle_t*)req->handle, close_cb);
         task->common.err = uverr_convert(status);
-        // 释放tcp_conn_t
-        delete reqData->conn;
+        // tcp_conn_t要在close_cb中释放
+        // delete reqData->conn;
     }
     else
     {
@@ -574,8 +584,8 @@ static int _do_connect(abs_task_t* task)
     err = uv_tcp_connect(req, &reqData->conn->tcp.handle, (sockaddr*)&addr, connect_cb);
     if (err != 0){
         task->err = uverr_convert(err);
-        uv_close((uv_handle_t*)&reqData->conn->tcp.handle, close_cb);
-        delete reqData->conn;
+        _safe_uv_close((uv_handle_t*)&reqData->conn->tcp.handle, close_cb);
+        // delete reqData->conn;
         delete reqData;
         return -1;
     }
@@ -627,6 +637,8 @@ void async_cb(uv_async_t* handle)
     {
     case async_task_type::RW:
     {
+        // 放入任务队列
+        cl_task_add(task->taskId, (abs_task_t*)task);
         rw_task_t* rt = (rw_task_t*)task;
         tcp_conn_t* conn = cl_conn_find(rt->connId);
         if (!conn)
@@ -667,6 +679,8 @@ void async_cb(uv_async_t* handle)
     }
     case async_task_type::CONNECT:
     {
+        // 放入任务队列
+        cl_task_add(task->taskId, (abs_task_t*)task);
         err = _do_connect(task);
         if (err != 0){
             _cl_finish_task(task);
@@ -678,7 +692,7 @@ void async_cb(uv_async_t* handle)
         break;
     }
 
-    uv_close((uv_handle_t*)handle, close_cb);
+    _safe_uv_close((uv_handle_t*)handle, close_cb);
 
     return;
 }

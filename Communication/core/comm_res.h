@@ -38,7 +38,7 @@ typedef struct
 typedef struct
 {
     abs_task_t* task;
-    uv_timer_t* timer;
+    uv_timer_t timer;
 }timer_data_t;
 
 typedef struct

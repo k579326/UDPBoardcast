@@ -1,30 +1,48 @@
 
 
-
+#include <iostream>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "Communication/comm.h"
+#include "comm_test_define.hpp"
 #include "uv.h"
 
 
-// 用于客户端接收推送消息的回调
-typedef void(*ssn_pushmsg_cb)(uint16_t connId, const void* data, int datalen);
-
-// 连接状态改变回调，如果status为true, 表示新建连接；如果status为false,表示断开连接
-typedef void(*ssn_conn_changed_cb)(uint16_t connId, const char* ip, bool status);
-
-// 服务端任务处理函数
-typedef void(*ssn_work_process_cb)(const void* indata, int inlen, void* outdata, int* outlen);
+using namespace std;
 
 
+static ConnMgr connmgr;
+
+
+void connect_changed_handler(uint16_t connId, const char* ip, bool status)
+{
+    string ip_changed;
+
+    if (status){
+        connmgr.AddConn(connId, ip);
+        ip_changed = ip;
+    }
+    else
+    {
+        ip_changed = connmgr.DelConn(connId);
+    }
+
+    string change;
+    change = status ? "Connect" : "Disconnect";
+
+    printf("[Conn Msg] IP: %s, ConnId: %d, status: %s\n", ip_changed.c_str(), connId, change.c_str());
+}
 void push_msg_handler(uint16_t connId, const void* data, int datalen)
 {
     char pushmsg[256] = {0};
 
     memcpy(pushmsg, data, datalen);
-    printf("[Clt Recv Pushmsg] %s\n", pushmsg);
+
+    string ip = connmgr.FindConn(connId);
+
+    printf("[Push Msg] %s From Server: %s\n", pushmsg, ip.c_str());
 }
 
 
@@ -35,33 +53,49 @@ void client_send_msg(void* param)
 
     while (1)
     {
-        int outlen = 256;
-        char outstr[256] = { 0 };
-        ssn_send(0, "123456", 6, &outbuf, &outlen, 10000);
+        auto connMap = connmgr.GetAllConn();
+        for (auto it = connMap.begin(); it != connMap.end(); it++)
+        {
+            int outlen = 256;
+            char outstr[256] = { 0 };
 
-        memcpy(outstr, outbuf, outlen);
-        printf("[clt recv resp] %s\n", outstr);
-        free(outbuf);
+            uint64_t tickcount = uv_hrtime();
+            string msg = "client msg...";
 
+            int err = ssn_send(it->first, msg.c_str(), msg.size(), &outbuf, &outlen, 1000);
+            if (err == 0)
+            {
+                memcpy(outstr, outbuf, outlen);
+                printf("[Resp Msg] msg: %s from Server %s. ###### Lost Time: %llu ms\n", 
+                       outstr, it->second.c_str(), (uv_hrtime() - tickcount) / 1000 / 1000);
+                free(outbuf);
+            }
+            else
+            {
+                printf("[Err Msg] Failed! To Server %s\n", it->second.c_str());
+            }
+        }
+        
         Sleep(200);
     }
 }
 
 int main()
 {
-    uv_thread_t thread;
+    uv_thread_t thread[1];
+    
+    ssn_startup_client(push_msg_handler, connect_changed_handler);
+    //ssn_connect("192.168.0.233", 10038, 3000);
+    ssn_connect("192.168.0.229", 10038, 3000);
+    for (int i= 0; i < 1; i++)
+        uv_thread_create(&thread[i], client_send_msg, NULL);
+    
+
     uv_sem_t sem;
     uv_sem_init(&sem, 1);
     uv_sem_wait(&sem);
-
-    ssn_startup_client(push_msg_handler, NULL);
-    ssn_connect("192.168.1.3", 10038, 3000);
-
-    uv_thread_create(&thread, client_send_msg, NULL);
-    
     uv_sem_wait(&sem);
     
-
     return 0;
 }
 

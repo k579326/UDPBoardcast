@@ -8,9 +8,6 @@
 
 using namespace std;
 
-#define RECV_BUF_MAX    (1024 * 1024)
-
-
 
 // 用于客户端接收推送消息的回调
 typedef void(*ssn_pushmsg_cb)(uint16_t connId, const void* data, int datalen);

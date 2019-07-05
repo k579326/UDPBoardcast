@@ -118,12 +118,12 @@ int init_tcp_conn(loop_type_t type, tcp_conn_t* conn)
     conn->tcp.length = 0;
     conn->tcp.type = TCP_CLIENT;
 
-    conn->tcp.handle.data = conn;
-
     if (type == CLIENT_LOOP)
         err = uv_tcp_init_ex(&g_ClientLoop.loop_info.loop, &conn->tcp.handle, AF_INET);
     else
         err = uv_tcp_init_ex(&g_serverLoop.loop_info.loop, &conn->tcp.handle, AF_UNSPEC);
+
+    conn->tcp.handle.data = conn;
 
     if (err != 0)
     {
@@ -246,15 +246,15 @@ bool cl_conn_valid(uint16_t connId)
 
 int cl_task_add(uint64_t taskId, const abs_task_t* task)
 {
-    uv_mutex_lock(&g_ClientLoop.taskTable.taskLock);
+    //uv_mutex_lock(&g_ClientLoop.taskTable.taskLock);
     g_ClientLoop.taskTable.table[taskId] = (abs_task_t*)task;
-    uv_mutex_unlock(&g_ClientLoop.taskTable.taskLock);
+    //uv_mutex_unlock(&g_ClientLoop.taskTable.taskLock);
     return 0;
 }
 abs_task_t* cl_task_del(uint64_t taskId)
 {
     abs_task_t* task = NULL;
-    uv_mutex_lock(&g_ClientLoop.taskTable.taskLock);
+    //uv_mutex_lock(&g_ClientLoop.taskTable.taskLock);
 
     std::map<uint64_t, abs_task_t*>::iterator it;
 
@@ -264,13 +264,13 @@ abs_task_t* cl_task_del(uint64_t taskId)
         task = it->second;
         g_ClientLoop.taskTable.table.erase(it);
     }
-    uv_mutex_unlock(&g_ClientLoop.taskTable.taskLock);
+    //uv_mutex_unlock(&g_ClientLoop.taskTable.taskLock);
     return task;
 }
 abs_task_t* cl_task_find(uint64_t taskId)
 {
     abs_task_t* task = NULL;
-    uv_mutex_lock(&g_ClientLoop.taskTable.taskLock);
+    //uv_mutex_lock(&g_ClientLoop.taskTable.taskLock);
 
     std::map<uint64_t, abs_task_t*>::iterator it;
 
@@ -279,21 +279,21 @@ abs_task_t* cl_task_find(uint64_t taskId)
     {
         task = it->second;
     }
-    uv_mutex_unlock(&g_ClientLoop.taskTable.taskLock);
+    //uv_mutex_unlock(&g_ClientLoop.taskTable.taskLock);
     return task;
 }
 
 int cl_timer_add(uint64_t taskId, const timer_data_t* timer)
 {
-    uv_mutex_lock(&g_ClientLoop.timerTable.timerLock);
+    //uv_mutex_lock(&g_ClientLoop.timerTable.timerLock);
     g_ClientLoop.timerTable.table[taskId] = (timer_data_t*)timer;
-    uv_mutex_unlock(&g_ClientLoop.timerTable.timerLock);
+    //uv_mutex_unlock(&g_ClientLoop.timerTable.timerLock);
     return 0;
 }
 timer_data_t* cl_timer_del(uint64_t taskId)
 {
     timer_data_t* timer = NULL;
-    uv_mutex_lock(&g_ClientLoop.timerTable.timerLock);
+    //uv_mutex_lock(&g_ClientLoop.timerTable.timerLock);
 
     std::map<uint64_t, timer_data_t*>::iterator it;
     it = g_ClientLoop.timerTable.table.find(taskId);
@@ -302,13 +302,13 @@ timer_data_t* cl_timer_del(uint64_t taskId)
         timer = it->second;
         g_ClientLoop.timerTable.table.erase(it);
     }
-    uv_mutex_unlock(&g_ClientLoop.timerTable.timerLock);
+    //uv_mutex_unlock(&g_ClientLoop.timerTable.timerLock);
     return timer;
 }
 timer_data_t* cl_timer_find(uint64_t taskId)
 {
     timer_data_t* timer = NULL;
-    uv_mutex_lock(&g_ClientLoop.timerTable.timerLock);
+    //uv_mutex_lock(&g_ClientLoop.timerTable.timerLock);
 
     std::map<uint64_t, timer_data_t*>::iterator it;
     it = g_ClientLoop.timerTable.table.find(taskId);
@@ -316,7 +316,7 @@ timer_data_t* cl_timer_find(uint64_t taskId)
     {
         timer = it->second;
     }
-    uv_mutex_unlock(&g_ClientLoop.timerTable.timerLock);
+    //uv_mutex_unlock(&g_ClientLoop.timerTable.timerLock);
     return timer;
 }
 

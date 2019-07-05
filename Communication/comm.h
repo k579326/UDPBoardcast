@@ -16,14 +16,5 @@ int ssn_push(const void* indata, int inlen);
 int ssn_connect(char* ip, short port, uint32_t timeout);
 
 
-int regiester_pushmsg_cb(ssn_pushmsg_cb cb);
-int regiester_connect_changed_cb(ssn_conn_changed_cb cb);
 
-
-
-// 锁插拔
-int send_dongle_change_msg();
-int regiester_task_cb();
-
-int server_stop();
 
