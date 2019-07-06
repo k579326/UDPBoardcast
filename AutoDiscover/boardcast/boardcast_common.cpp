@@ -3,7 +3,7 @@
 #include "cb_sysinfo.h"
 #include "boardcast_protocol.h"
 #include "boardcast_common.h"
-#include "boardcast_address/select_network.h"
+#include "select_network.h"
 
 int setnonblock(SOCKET sockfd)
 {

@@ -16,6 +16,7 @@ int nd_set_running_type(int runType)
 		if (~runType & CLT_RUN_TYPE)
 		{
 			clt_model_stop();
+            retc = -1;
 		}
 	}
 	else
@@ -31,6 +32,7 @@ int nd_set_running_type(int runType)
 		if (~runType & SVR_RUN_TYPE)
 		{
 			svr_model_stop();
+            rets = -1;
 		}
 	}
 	else
@@ -41,34 +43,17 @@ int nd_set_running_type(int runType)
 		}
 	}
 
-	if (retc == 0 && rets == 0)
-	{
-		g_runType = runType;
-	}
-	else
-	{
-		//TODO:
+    g_runType = NONE_RUN_TYPE;
+    if (retc == 0) g_runType = (g_runType | CLT_RUN_TYPE);
+    if (rets == 0) g_runType = (g_runType | SVR_RUN_TYPE);
 
-		g_runType = (retc != 0 ? (runType & ~CLT_RUN_TYPE) : runType);
-		g_runType = (rets != 0 ? (runType & ~SVR_RUN_TYPE) : runType);
-	}
-	return 0;
-}
-
-int nd_test_oriented_server()
-{
-	return 0;
-}
-
-int nd_add_oriented_server()
-{
 	return 0;
 }
 
 
 int nd_boardcast_init()
 {
-	int rets = 0, retc = 0;
+	int rets = -1, retc = -1;
 	bool cErr = false, sErr = false;
 
 	retc = clt_model_init();

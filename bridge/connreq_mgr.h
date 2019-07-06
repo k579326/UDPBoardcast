@@ -2,36 +2,20 @@
 
 #pragma once
 
-
-#include "ssnet_define.h"
-
-
-typedef enum
-{
-    REQ_Add,
-    REQ_Del,
-}req_type_em;
-
-
-typedef struct
-{
-    peer_info_t info;
-    req_type_em req_type;
-}conn_req_t;
+#include <stdint.h>
+#include "sysheader.h"
 
 
 // 该回调函数内部不可阻塞，不建议有耗时太多的功能
-typedef void (*HOST_CHANGE_CB)(const conn_req_t* req);
-
-// 远端客户端断开的回调
-void RegisterClientDisconnectCallback(HOST_CHANGE_CB cb);
-
-// 发现和丢失远端服务器的回调
-void RegisterServerChangeCallback(HOST_CHANGE_CB cb);
+typedef void (*DISCOVER_SVR_CB)(const char* ip, short port, uint32_t timeout);
 
 
-void deliver_svrchange_msg(req_type_em type, const peer_info_t* peer);
-void deliver_cltchange_msg(req_type_em type, const peer_info_t* peer);
-void clean_svrchange_msg();
-void clean_cltchange_msg();
+// 注册连接远端服务器的接口
+void RegisterConnectServerCallback(DISCOVER_SVR_CB cb);
+
+
+void deliver_addsvr_msg(const char* ip, short port);
+
+
+
 

@@ -31,15 +31,15 @@ static void _clientloop_process(void* param)
 
 static void _serverloop_process(void* param)
 {
-    server_loop_t* cl = (server_loop_t*)param;
+    server_loop_t* sl = (server_loop_t*)param;
     
     while (1)
     {
-        if (!uv_loop_alive(&cl->loop_info.loop))
+        if (!uv_loop_alive(&sl->loop_info.loop))
         {
             break;
         }
-        uv_run(&cl->loop_info.loop, UV_RUN_DEFAULT);
+        uv_run(&sl->loop_info.loop, UV_RUN_DEFAULT);
     }
 }
 
@@ -175,7 +175,7 @@ int cl_conn_add(uint16_t connId, tcp_conn_t* conn)
 tcp_conn_t* cl_conn_del(uint16_t connId)
 {
     tcp_conn_t* conn = NULL;
-    uv_rwlock_rdlock(&g_ClientLoop.connTable.connLock);
+    uv_rwlock_wrlock(&g_ClientLoop.connTable.connLock);
 
     std::map<uint16_t, tcp_conn_t*>::iterator it;
     it = g_ClientLoop.connTable.table.find(connId);
@@ -184,13 +184,13 @@ tcp_conn_t* cl_conn_del(uint16_t connId)
         conn = it->second;
         g_ClientLoop.connTable.table.erase(it);
     }
-    uv_rwlock_rdunlock(&g_ClientLoop.connTable.connLock);
+    uv_rwlock_wrunlock(&g_ClientLoop.connTable.connLock);
     return conn;
 }
 
 void cl_conn_del2 (const tcp_conn_t* conn)
 {
-    uv_rwlock_rdlock(&g_ClientLoop.connTable.connLock);
+    uv_rwlock_wrlock(&g_ClientLoop.connTable.connLock);
 
     std::map<uint16_t, tcp_conn_t*>::iterator it;
 
@@ -199,14 +199,14 @@ void cl_conn_del2 (const tcp_conn_t* conn)
     {
         g_ClientLoop.connTable.table.erase(it);
     }
-    uv_rwlock_rdunlock(&g_ClientLoop.connTable.connLock);
+    uv_rwlock_wrunlock(&g_ClientLoop.connTable.connLock);
 }
 
 
 tcp_conn_t* cl_conn_find(uint16_t connId)
 {
     tcp_conn_t* conn = NULL;
-    uv_rwlock_wrlock(&g_ClientLoop.connTable.connLock);
+    uv_rwlock_rdlock(&g_ClientLoop.connTable.connLock);
 
     std::map<uint16_t, tcp_conn_t*>::iterator it;
     it = g_ClientLoop.connTable.table.find(connId);
@@ -215,22 +215,49 @@ tcp_conn_t* cl_conn_find(uint16_t connId)
         conn = it->second;
     }
 
-    uv_rwlock_wrunlock(&g_ClientLoop.connTable.connLock);
+    uv_rwlock_rdunlock(&g_ClientLoop.connTable.connLock);
     return conn;
 }
+
+tcp_conn_t* cl_conn_find2(const char* ip)
+{
+    tcp_conn_t* conn = NULL;
+    uv_rwlock_rdlock(&g_ClientLoop.connTable.connLock);
+
+    std::map<uint16_t, tcp_conn_t*>::iterator it;
+
+    for (it = g_ClientLoop.connTable.table.begin();
+         it != g_ClientLoop.connTable.table.end(); it++)
+    {
+        if (it->second->info.ip == ip)
+        {
+            conn = it->second;
+            break;
+        }
+    }
+    if (it == g_ClientLoop.connTable.table.end())
+    {
+        conn = NULL;
+    }
+
+    uv_rwlock_rdunlock(&g_ClientLoop.connTable.connLock);
+    return conn;
+}
+
+
 std::map<uint16_t, tcp_conn_t*> cl_conn_list()
 {
     std::map<uint16_t, tcp_conn_t*> list;
-    uv_rwlock_wrlock(&g_ClientLoop.connTable.connLock);
+    uv_rwlock_rdlock(&g_ClientLoop.connTable.connLock);
     list = g_ClientLoop.connTable.table;
-    uv_rwlock_wrunlock(&g_ClientLoop.connTable.connLock);
+    uv_rwlock_rdunlock(&g_ClientLoop.connTable.connLock);
     return list;
 }
 
 bool cl_conn_valid(uint16_t connId)
 {
     bool flag = false;
-    uv_rwlock_wrlock(&g_ClientLoop.connTable.connLock);
+    uv_rwlock_rdlock(&g_ClientLoop.connTable.connLock);
 
     std::map<uint16_t, tcp_conn_t*>::iterator it;
     it = g_ClientLoop.connTable.table.find(connId);
@@ -239,7 +266,7 @@ bool cl_conn_valid(uint16_t connId)
         flag = true;
     }
 
-    uv_rwlock_wrunlock(&g_ClientLoop.connTable.connLock);
+    uv_rwlock_rdunlock(&g_ClientLoop.connTable.connLock);
     return flag;
 }
 
@@ -462,7 +489,7 @@ int sl_conn_add(uint16_t connId, tcp_conn_t* conn)
 tcp_conn_t* sl_conn_del(uint16_t connId)
 {
     tcp_conn_t* conn = NULL;
-    uv_rwlock_rdlock(&g_serverLoop.connTable.connLock);
+    uv_rwlock_wrlock(&g_serverLoop.connTable.connLock);
 
     std::map<uint16_t, tcp_conn_t*>::iterator it;
     it = g_serverLoop.connTable.table.find(connId);
@@ -470,13 +497,13 @@ tcp_conn_t* sl_conn_del(uint16_t connId)
         conn = it->second;
         g_serverLoop.connTable.table.erase(it);
     }
-    uv_rwlock_rdunlock(&g_serverLoop.connTable.connLock);
+    uv_rwlock_wrunlock(&g_serverLoop.connTable.connLock);
     return conn;
 }
 
 void sl_conn_del2(const tcp_conn_t* conn)
 {
-    uv_rwlock_rdlock(&g_serverLoop.connTable.connLock);
+    uv_rwlock_wrlock(&g_serverLoop.connTable.connLock);
 
     std::map<uint16_t, tcp_conn_t*>::iterator it;
 
@@ -485,14 +512,14 @@ void sl_conn_del2(const tcp_conn_t* conn)
     {
         g_serverLoop.connTable.table.erase(it);
     }
-    uv_rwlock_rdunlock(&g_serverLoop.connTable.connLock);
+    uv_rwlock_wrunlock(&g_serverLoop.connTable.connLock);
 }
 
 
 tcp_conn_t* sl_conn_find(uint16_t connId)
 {
     tcp_conn_t* conn = NULL;
-    uv_rwlock_wrlock(&g_serverLoop.connTable.connLock);
+    uv_rwlock_rdlock(&g_serverLoop.connTable.connLock);
 
     std::map<uint16_t, tcp_conn_t*>::iterator it;
     it = g_serverLoop.connTable.table.find(connId);
@@ -501,16 +528,16 @@ tcp_conn_t* sl_conn_find(uint16_t connId)
         conn = it->second;
     }
 
-    uv_rwlock_wrunlock(&g_serverLoop.connTable.connLock);
+    uv_rwlock_rdunlock(&g_serverLoop.connTable.connLock);
     return conn;
 }
 
 std::map<uint16_t, tcp_conn_t*> sl_conn_list()
 {
     std::map<uint16_t, tcp_conn_t*> list;
-    uv_rwlock_wrlock(&g_serverLoop.connTable.connLock);
+    uv_rwlock_rdlock(&g_serverLoop.connTable.connLock);
     list = g_serverLoop.connTable.table;
-    uv_rwlock_wrunlock(&g_serverLoop.connTable.connLock);
+    uv_rwlock_rdunlock(&g_serverLoop.connTable.connLock);
     return list;
 }
 

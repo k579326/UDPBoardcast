@@ -5,7 +5,8 @@
 #include <vector>
 #include <map>
 #include <string>
-
+#include <stdint.h>
+#include "uv.h"
 
 class ConnMgr
 {
@@ -52,7 +53,7 @@ public:
         return x;
     }
 
-    string FindConn(uint16_t connId)
+    std::string FindConn(uint16_t connId)
     {
         std::string x;
         uv_mutex_lock(&connListLock);
@@ -60,7 +61,6 @@ public:
         uv_mutex_unlock(&connListLock);
         return x;
     }
-
 
     uv_mutex_t connListLock;
     std::map<uint16_t, std::string> connList;

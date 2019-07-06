@@ -6,6 +6,8 @@
 #include "connreq_mgr.h"
 #include "ssnet_define.h"
 #include "sysheader.h"
+#include "threadpool.h"
+#include "Communication/comm_internal.h"
 
 
 class HostChangeReq
@@ -14,48 +16,31 @@ public:
     HostChangeReq()
     {
         uv_mutex_init(&mutex_);
-        uv_cond_init(&cond_);
-        uv_sem_init(&semExit_, 1);
-        uv_sem_wait(&semExit_);
+        threadpool_init(&threadpool_, 4);       // 4条线程负责对广播发现的服务端进行连接
 
         cb_ = NULL;
 
-        uv_thread_create(&thread_, req_handle, this);
     }
     ~HostChangeReq(){
-
-        uv_sem_post(&semExit_);
-        uv_cond_signal(&cond_);
-        uv_thread_join(&thread_);
-
         uv_mutex_destroy(&mutex_);
-        uv_cond_destroy(&cond_);
+        threadpool_uninit(threadpool_);
+        threadpool_ = NULL;
         cb_ = NULL;
     }
 
-    void SetCallBack(HOST_CHANGE_CB cb){
-        lock();
+    void SetCallBack(DISCOVER_SVR_CB cb){
         cb_ = cb;
-        unlock();
     }
-    static void req_handle(void* thread_param);
+    static void threadpool_work(void* thread_param);
 
-    void addmsg(conn_req_t req);
-
+    void addsvrconn(const char* ip, short port);
+    void delsvrconn(const char* ip);
     void clrmsg(){
         lock();
         reqs.clear();
         unlock();
     }
 
-    void wait()
-    {
-        uv_cond_wait(&cond_, &mutex_);
-    }
-    void signal()
-    {
-        uv_cond_signal(&cond_);
-    }
 
 private:
 
@@ -66,117 +51,132 @@ private:
         uv_mutex_unlock(&mutex_);
     }
 
-    std::list<conn_req_t> reqs;
-    uv_thread_t thread_;
+    std::list<peer_info_t> reqs;
     uv_mutex_t mutex_;
-    uv_cond_t cond_;
-    uv_sem_t semExit_;
-    HOST_CHANGE_CB cb_;
+    DISCOVER_SVR_CB cb_;
+    threadpool_t* threadpool_;
 };
 
-
-void HostChangeReq::addmsg(conn_req_t req)
+typedef struct
 {
+    HostChangeReq* ptr;
+    peer_info_t peer;
+}thread_param_t;
+
+
+void HostChangeReq::threadpool_work(void* thread_param)
+{
+    int err = 0;
+    thread_param_t* param = (thread_param_t*)thread_param;
+
+    err = ssn_connect(param->peer.ip.c_str(), param->peer.port, CONN_TIMEOUT);
+    if (0 != err)
+    {
+        // LOG:
+    }
+
+    // 连接完成，删除连接请求
+    param->ptr->delsvrconn(param->peer.ip.c_str());
+
+    delete param;
+}
+
+
+void HostChangeReq::addsvrconn(const char* ip, short port)
+{
+    
     lock();
 
-    std::list<conn_req_t>::iterator it;
+    std::list<peer_info_t>::iterator it;
     for (it = reqs.begin(); it != reqs.end(); it++)
     {
-        // 这里不检查端口，客户端变动的消息来的时候没有带端口。这样的话就不支持服务端开两个不同端口来通信
-        if (it->req_type == req.req_type && it->info.ip == it->info.ip)
+        if (it->ip == it->ip)
         {
             break;
         }
     }
     if (it == reqs.end())
-        reqs.push_back(req);
-
-    unlock();
-}
-
-void HostChangeReq::req_handle(void* thread_param)
-{
-    HostChangeReq* reqObj = (HostChangeReq*)thread_param;
-
-    while (1)
     {
-        if (uv_sem_trywait(&reqObj->semExit_) == 0)
-        {
-            break;
-        }
-        reqObj->lock();
+        peer_info_t peer;
+        peer.ip = ip;
+        peer.port = port;
+        reqs.push_back(peer);
 
-        conn_req_t cr;
-        std::list<conn_req_t>::iterator it;
-
-        if (reqObj->reqs.empty())
-        {
-            reqObj->wait();
-        }
-
-        it = reqObj->reqs.begin();
-        if (it == reqObj->reqs.end())
-        {
-            reqObj->unlock();
-            continue;
-        }
-        cr = *it;
-
-        reqObj->reqs.pop_front();
-        if (reqObj->cb_)
-        {
-            reqObj->cb_(&cr);
-        }
-
-        reqObj->unlock();
+        thread_param_t* param = new thread_param_t;
+        param->ptr = this;
+        param->peer = peer;
+        threadpool_push_work(threadpool_, param, threadpool_work, NULL);
     }
+    unlock();
+
+    return;
+}
+
+void HostChangeReq::delsvrconn(const char* ip)
+{
+    lock();
+
+    std::list<peer_info_t>::iterator it;
+    for (it = reqs.begin(); it != reqs.end(); )
+    {
+        if (it->ip == it->ip)
+        {
+           it = reqs.erase(it);
+        }
+        else
+        {
+            it++;
+        }
+    }
+    unlock();
+    return;
 }
 
 
-static HostChangeReq g_clientReqHandler;            // 处理发现远程客户端的消息
+
+
+// static HostChangeReq g_clientReqHandler;            // 处理发现远程客户端的消息
 static HostChangeReq g_serverReqHandler;            // 处理发现远程服务端的消息
 
 
-// 远端客户端断开的回调
-void RegisterClientDisconnectCallback(HOST_CHANGE_CB cb)
-{
-    g_clientReqHandler.SetCallBack(cb);
-}
+// // 远端客户端断开的回调
+// void RegisterClientDisconnectCallback(HOST_CHANGE_CB cb)
+// {
+//     g_clientReqHandler.SetCallBack(cb);
+// }
 
 // 发现和丢失远端服务器的回调
-void RegisterServerChangeCallback(HOST_CHANGE_CB cb)
+void RegisterConnectServerCallback(DISCOVER_SVR_CB cb)
 {
     g_serverReqHandler.SetCallBack(cb);
 }
 
 
-void deliver_svrchange_msg(req_type_em type, const peer_info_t* peer)
+void deliver_addsvr_msg(const char* ip, short port)
 {
-    conn_req_t req;
-    req.req_type = type;
-    req.info.ip = peer->ip;
-    req.info.port = peer->port;
+    if (!ip)
+    {
+        return;
+    }
+    g_serverReqHandler.addsvrconn(ip, port);
+}
+// void deliver_cltchange_msg(req_type_em type, const peer_info_t* peer)
+// {
+//     conn_req_t req;
+//     req.req_type = type;
+//     req.info.ip = peer->ip;
+//     req.info.port = peer->port;
+// 
+//     g_clientReqHandler.addmsg(req);
+//     g_clientReqHandler.signal();
+// }
 
-    g_serverReqHandler.addmsg(req);
-    g_serverReqHandler.signal();
-}
-void deliver_cltchange_msg(req_type_em type, const peer_info_t* peer)
-{
-    conn_req_t req;
-    req.req_type = type;
-    req.info.ip = peer->ip;
-    req.info.port = peer->port;
-
-    g_clientReqHandler.addmsg(req);
-    g_clientReqHandler.signal();
-}
-
-void clean_svrchange_msg()
-{
-    g_serverReqHandler.clrmsg();
-}
-void clean_cltchange_msg()
-{
-    g_clientReqHandler.clrmsg();
-}
+// void clean_svrchange_msg()
+// {
+//     g_serverReqHandler.clrmsg();
+// }
+// void clean_cltchange_msg()
+// {
+//     g_clientReqHandler.clrmsg();
+// }
 

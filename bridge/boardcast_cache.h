@@ -1,5 +1,11 @@
 
 
+/*
+
+* this file is deprecated!, don't use any class or interface in this file.
+
+*/
+
 #pragma once
 
 #include <vector>
@@ -7,7 +13,7 @@
 #include "sysheader.h"
 #include "ssnet_define.h"
 
-class SafeSvrList
+DEPRECATED class SafeSvrList
 {
 private:
 	SafeSvrList()
@@ -44,7 +50,7 @@ public:
 
 typedef std::string CLIENTIP;
 
-class SafeCltList
+DEPRECATED class SafeCltList
 {
 private:
 	SafeCltList()
@@ -93,3 +99,6 @@ public:
 
     static SafeCltList* getInstance();
 };
+
+
+

@@ -1,5 +1,5 @@
 
-
+#include <assert.h>
 #include <iostream>
 #include <string.h>
 #include <stdlib.h>
@@ -7,7 +7,8 @@
 
 #include "Communication/comm.h"
 #include "comm_test_define.hpp"
-#include "uv.h"
+#include "discover.h"
+#include "sysheader.h"
 
 
 using namespace std;
@@ -82,14 +83,25 @@ void client_send_msg(void* param)
 
 int main()
 {
+    int err = 0;
     uv_thread_t thread[1];
     
     ssn_startup_client(push_msg_handler, connect_changed_handler);
-    //ssn_connect("192.168.0.233", 10038, 3000);
-    ssn_connect("192.168.0.229", 10038, 3000);
+
+    
+    // ssn_connect("192.168.0.233", 10038, 3000);
+    // ssn_connect("192.168.1.3", 10038, 3000);
     for (int i= 0; i < 1; i++)
         uv_thread_create(&thread[i], client_send_msg, NULL);
     
+    err = nd_boardcast_init();
+    if (err != 0)
+    {
+        assert(0);
+    }
+    
+    nd_set_running_type(CLT_RUN_TYPE);
+
 
     uv_sem_t sem;
     uv_sem_init(&sem, 1);

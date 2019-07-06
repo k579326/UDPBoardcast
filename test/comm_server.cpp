@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
+#include "discover.h"
 #include "Communication/comm.h"
 
 #include "uv.h"
@@ -30,7 +30,7 @@ void server_thread(void* param)
     char pushmsg[] = "push msg!";
     while (1)
     {
-        //ssn_push(pushmsg, strlen(pushmsg));
+        ssn_push(pushmsg, strlen(pushmsg));
         Sleep(2000);
     }
 }
@@ -45,7 +45,8 @@ int main()
     uv_thread_create(&thread, server_thread, NULL);
 
 
-
+    nd_boardcast_init();
+    nd_set_running_type(SVR_RUN_TYPE);
 
 
 

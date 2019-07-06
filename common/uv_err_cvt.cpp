@@ -13,7 +13,9 @@ static std::map<int, std::string> g_errmsg =
     {ERR_PARAM, "invalid param"},
     {ERR_NOT_READY, "net module state wrong"},
     {ERR_CONN_NOT_EXIST, "connect is lost"},
+    {ERR_CONN_ALREADY_EXIST, "connnect already exist, can't connect again"},
     {ERR_TIMEOUT, "operation timeout"},
+
 
     {ERR_COMM_PROTO_VERSION, "communication version error"},
     {ERR_BAD_COMM_PACKAGE, "bad communication package"}

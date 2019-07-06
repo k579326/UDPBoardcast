@@ -5,10 +5,12 @@
 
 
 #include <stdint.h>
+#include <vector>
 
 
+int ssn_connect(const char* ip, short port, uint32_t timeout);
 
-int ssn_connect(char* ip, short port);
+bool ssn_connect_is_exist(const char* ip);
 
 
 

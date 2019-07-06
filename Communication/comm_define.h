@@ -9,6 +9,7 @@
 using namespace std;
 
 
+
 // 用于客户端接收推送消息的回调
 typedef void(*ssn_pushmsg_cb)(uint16_t connId, const void* data, int datalen);
 
@@ -17,7 +18,6 @@ typedef void(*ssn_conn_changed_cb)(uint16_t connId, const char* ip, bool status)
 
 // 服务端任务处理函数
 typedef void(*ssn_work_process_cb)(const void* indata, int inlen, void* outdata, int* outlen);
-
 
 enum async_task_type
 {

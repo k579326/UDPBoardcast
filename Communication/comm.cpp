@@ -7,18 +7,17 @@
 #include "ssnet_err.h"
 #include "Communication/core/comm_res.h"
 
+
 int ssn_startup_client(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
 {
     init_client_loop(pushmsg_cb, conn_cb);
-    start_client_loop();
-    return 0;
+    return start_client_loop();
 }
 
 int ssn_startup_server(ssn_work_process_cb cb, size_t workthread_num)
 {
     init_server_loop();
-    start_server_loop(cb, workthread_num);
-    return 0;
+    return start_server_loop(cb, workthread_num);
 }
 
 
@@ -36,13 +35,18 @@ int ssn_send(uint16_t connId, const void* indata, int inlen, void** outdata, int
     return ret;
 }
 
-int ssn_connect(char* ip, short port, uint32_t timeout)
+int ssn_connect(const char* ip, short port, uint32_t timeout)
 {
     int ret = 0;
 
     if (ip == NULL)
     {
         return ERR_PARAM;
+    }
+
+    if (ssn_connect_is_exist(ip))
+    {
+        return ERR_CONN_ALREADY_EXIST;
     }
 
     return async_conn(ip, port, timeout);
@@ -59,6 +63,20 @@ int ssn_push(const void* indata, int inlen)
 
     return async_push(indata, inlen);
 }
+
+
+bool ssn_connect_is_exist(const char* ip)
+{
+    if (ip == NULL)
+    {
+        return false;
+    }
+    
+    return NULL != cl_conn_find2(ip);
+}
+
+
+
 
 
 

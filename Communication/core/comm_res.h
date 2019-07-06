@@ -119,6 +119,7 @@ int cl_conn_add(uint16_t connId, tcp_conn_t* conn);
 tcp_conn_t* cl_conn_del(uint16_t connId);
 void cl_conn_del2(const tcp_conn_t* conn);
 tcp_conn_t* cl_conn_find(uint16_t connId);
+tcp_conn_t* cl_conn_find2(const char* ip);
 std::map<uint16_t, tcp_conn_t*> cl_conn_list();
 bool cl_conn_valid(uint16_t connId);
 

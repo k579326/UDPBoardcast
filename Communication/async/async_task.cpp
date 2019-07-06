@@ -63,7 +63,7 @@ exit:
     return ret;
 }
 
-int async_conn(char* ip, short port, uint32_t timeout)
+int async_conn(const char* ip, short port, uint32_t timeout)
 {
     uv_async_t* async = cl_create_async();
     if (!async)

@@ -61,8 +61,7 @@ void close_cb(uv_handle_t* handle)
             else
             {
                 client_loop_t* loopInfo = (client_loop_t*)handle->loop->data;
-                cl_conn_del(conn->connId);
-                if (loopInfo->conn_cb)
+                if (cl_conn_del(conn->connId) && loopInfo->conn_cb)
                     loopInfo->conn_cb(conn->connId, conn->info.ip.c_str(), false);
             }
         }
@@ -556,6 +555,14 @@ static int _do_connect(abs_task_t* task)
     int err;
     //comm_tcp_t conn;
     conn_task_t* ct = (conn_task_t*)task;
+
+    // 查找连接是否已存在
+    if (NULL != cl_conn_find2(ct->ip))
+    {
+        task->err = ERR_CONN_ALREADY_EXIST;
+        return -1;
+    }
+
 
     conn_req_t* reqData = new conn_req_t;
     reqData->conn = new tcp_conn_t;

@@ -10,7 +10,8 @@
 #include "boardcast_common.h"
 #include "boardcast_define.h"
 #include "select_network.h"
-#include "bridge/boardcast_cache.h"
+// #include "bridge/boardcast_cache.h"
+#include "bridge/connreq_mgr.h"
 #include "ssnet_define.h"
 
 static socket_env_t g_cltbc_listen;		// 用于接收服务端广播
@@ -18,7 +19,7 @@ static SOCKET g_clt_stutdown_socket = -1;		// 用于客户端停止是发送消�
 static SOCKET g_clt_startup_socket = -1;
 
 
-
+// deprecated 
 static void _oriented_feedback_alive(const std::string& ip)
 {
     int ret = 0;
@@ -48,12 +49,13 @@ static void _handle_boardcast_msg(int msg_type, const peer_info_t& peer)
 {
 	if (msg_type == BOARDCAST_MSG_STARTUP)
 	{
-		SafeSvrList::getInstance()->add(peer);
-        _oriented_feedback_alive(peer.ip);
+        deliver_addsvr_msg(peer.ip.c_str(), peer.port);
+		// SafeSvrList::getInstance()->add(peer);
+        // _oriented_feedback_alive(peer.ip);
 	}
 	else if (msg_type == BOARDCAST_MSG_SHUTDOWN)
 	{
-        SafeSvrList::getInstance()->del(peer);
+        // SafeSvrList::getInstance()->del(peer);
 	}
     return;
 }
@@ -133,56 +135,43 @@ static int _client_startup_boardcast()
 	return ret;
 }
 
-static void _client_shutdown_oriented_notify()
-{
-    std::vector<peer_info_t> svrList = SafeSvrList::getInstance()->clr();
-
-    for (std::vector<peer_info_t>::const_iterator it = svrList.begin();
-         it != svrList.end(); it++)
-    {
-        int ret = 0;
-        boardcast_package_t pkg;
-        sockaddr_in server_addr;
-        
-        server_addr.sin_family = AF_INET;
-        server_addr.sin_addr = StringToNetIp(it->ip.c_str());
-        server_addr.sin_port = htons(SERVER_PORT);
-
-        make_shutdown_pkg(&pkg);
-
-        ret = sendto(g_clt_stutdown_socket, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
-        if (ret != sizeof(boardcast_package_t))
-        {
-            // TODO:
-        }
-    }
-}
+// static void _client_shutdown_oriented_notify()
+// {
+//     std::vector<peer_info_t> svrList = SafeSvrList::getInstance()->clr();
+// 
+//     for (std::vector<peer_info_t>::const_iterator it = svrList.begin();
+//          it != svrList.end(); it++)
+//     {
+//         int ret = 0;
+//         boardcast_package_t pkg;
+//         sockaddr_in server_addr;
+//         
+//         server_addr.sin_family = AF_INET;
+//         server_addr.sin_addr = StringToNetIp(it->ip.c_str());
+//         server_addr.sin_port = htons(SERVER_PORT);
+// 
+//         make_shutdown_pkg(&pkg);
+// 
+//         ret = sendto(g_clt_stutdown_socket, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
+//         if (ret != sizeof(boardcast_package_t))
+//         {
+//             // TODO:
+//         }
+//     }
+// }
 
 
 
 int clt_model_init()
 {
 	int ret = 0;
-	g_cltbc_listen.sockfd = create_listen_udp_socket(CLIENT_PORT);
-	if (g_cltbc_listen.sockfd == -1)
-	{
-		ret = -1;  // TODO:
-		goto exit;
-	}
-
-	g_clt_startup_socket = create_boardcast_socket();
-	if (g_clt_startup_socket == -1)
-	{
-		ret = -1;  // TODO:
-		goto exit;
-	}
-
-	g_clt_stutdown_socket = create_udp_socket();
-	if (g_clt_stutdown_socket == -1)
-	{
-		ret = -1;  // TODO:
-		goto exit;
-	}
+	
+	// g_clt_stutdown_socket = create_udp_socket();
+	// if (g_clt_stutdown_socket == -1)
+	// {
+	// 	ret = -1;  // TODO:
+	// 	goto exit;
+	// }
 
 	g_cltbc_listen.pause = true;
 	uv_mutex_init(&g_cltbc_listen.mutex);
@@ -192,14 +181,6 @@ int clt_model_init()
 
 	uv_thread_create(&g_cltbc_listen.thread, _cltbc_listen_thread, NULL);
 
-exit:
-
-	if (ret != 0)
-	{
-		cleansocket(&g_cltbc_listen.sockfd);
-		cleansocket(&g_clt_startup_socket);
-		cleansocket(&g_clt_stutdown_socket);
-	}
 
 	return ret;
 }
@@ -208,13 +189,37 @@ exit:
 int clt_model_start()
 {
 	int ret = 0;
+
+    g_cltbc_listen.sockfd = create_listen_udp_socket(CLIENT_PORT);
+    if (g_cltbc_listen.sockfd == -1)
+    {
+        ret = -1;  // TODO:
+        goto exit;
+    }
+
+    g_clt_startup_socket = create_boardcast_socket();
+    if (g_clt_startup_socket == -1)
+    {
+        ret = -1;  // TODO:
+        goto exit;
+    }
+
+
 	uv_mutex_lock(&g_cltbc_listen.mutex);
 	g_cltbc_listen.pause = false;
 	uv_mutex_unlock(&g_cltbc_listen.mutex);
 
 	uv_cond_signal(&g_cltbc_listen.cond);
 
-	ret = _client_startup_boardcast();
+	_client_startup_boardcast();
+
+exit:
+    if (ret != 0)
+    {
+        cleansocket(&g_cltbc_listen.sockfd);
+        cleansocket(&g_clt_startup_socket);
+        // cleansocket(&g_clt_stutdown_socket);
+    }
 
 	return 0;
 }
@@ -225,8 +230,11 @@ int clt_model_stop()
 	g_cltbc_listen.pause = true;
 	uv_mutex_unlock(&g_cltbc_listen.mutex);
 
-    // 给所有已连接的服务端发送关闭消息，并清理自己的缓存
-	_client_shutdown_oriented_notify();
+    cleansocket(&g_cltbc_listen.sockfd);
+    cleansocket(&g_clt_startup_socket);
+
+    // 客户端和服务端关闭时都不再通知对方
+	// _client_shutdown_oriented_notify();
 
 	return 0;
 }
@@ -242,9 +250,7 @@ int clt_model_uninit()
 	uv_mutex_destroy(&g_cltbc_listen.mutex);
 	uv_sem_destroy(&g_cltbc_listen.sem_exit);
 
-	cleansocket(&g_cltbc_listen.sockfd);
-    cleansocket(&g_clt_startup_socket);
-    cleansocket(&g_clt_stutdown_socket);
+    // cleansocket(&g_clt_stutdown_socket);
 
 	return 0;
 }

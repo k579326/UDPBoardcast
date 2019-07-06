@@ -1,10 +1,21 @@
 
 
+/*
+
+* this file is deprecated!
+
+*/
+
+
+
 #include <stdio.h>
 #include <algorithm>
 #include "boardcast_cache.h"
 #include "ssnet_define.h"
 #include "connreq_mgr.h"
+
+
+
 
 SafeSvrList* SafeSvrList::getInstance()
 {

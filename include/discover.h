@@ -12,11 +12,10 @@
 
 int nd_set_running_type(int runType);
 
-int nd_test_oriented_server();
-
-int nd_add_oriented_server();
-
 int nd_boardcast_init();
 
 int nd_boardcast_uninit();
+
+
+
 

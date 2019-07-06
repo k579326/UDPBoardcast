@@ -8,7 +8,7 @@
 
 #include "select_network.h"
 #include "boardcast_define.h"
-#include "bridge/boardcast_cache.h"
+// #include "bridge/boardcast_cache.h"
 #include "threadhelper.h"
 
 static socket_env_t g_svr_bc;			// 用于服务器广播
@@ -20,7 +20,7 @@ static SOCKET g_svr_feedback_sockfd = -1;	// 定向反馈socket
 static SOCKET g_svr_shutdown_sockfd = -1;   // 关闭服务端的广播
 
 
-static void _boardcast_shutdown_msg()
+DEPRECATED static void _boardcast_shutdown_msg()
 {
     boardcast_package_t pkg;
 
@@ -72,15 +72,15 @@ static void _handle_boardcast_msg(int msg_type, const peer_info_t& peer)
     if (msg_type == BOARDCAST_MSG_STARTUP)
     {
         _oriented_feedback(peer.ip.c_str());
-        SafeCltList::getInstance()->add(peer.ip);
+        // SafeCltList::getInstance()->add(peer.ip);
     }
     else if (msg_type == BOARDCAST_MSG_SHUTDOWN)
     {
-        SafeCltList::getInstance()->del(peer.ip);
+        // SafeCltList::getInstance()->del(peer.ip);
     }
     else if (msg_type == BOARDCAST_MSG_KEEPALIVE)
     {
-        SafeCltList::getInstance()->add(peer.ip);
+        // SafeCltList::getInstance()->add(peer.ip);
     }
     return;
 }
@@ -131,12 +131,7 @@ static void _svrbc_listen_thread(void* param)
 		}
 
         // 刷新keepalive时间
-        SafeCltList::getInstance()->RefreshAliveTime();
-
-		if (uv_sem_trywait(&g_svrbc_listen.sem_exit) == 0)
-		{// 增加一处退出信号捕获，降低程序退出时等待几率
-			break;
-		}
+        // SafeCltList::getInstance()->RefreshAliveTime();
 		CB_THREAD_SLEEP_MS(SVR_BC_LISTEN_TIMESPACE);
 	}
 
@@ -188,6 +183,14 @@ static void _boardcast_svr_msg(void* msg)
 
 static int _svr_boardcast_start()
 {
+
+    g_svr_bc.sockfd = create_boardcast_socket();
+    if (g_svr_bc.sockfd == -1)
+    {
+        return -1;
+    }
+
+
     uv_mutex_lock(&g_svr_bc.mutex);
     g_svr_bc.pause = false;
     uv_mutex_unlock(&g_svr_bc.mutex);
@@ -205,12 +208,19 @@ static int _svr_boardcast_stop()
     uv_mutex_unlock(&g_svr_bc.mutex);
     g_slp.wakeup();
 
+    cleansocket(&g_svr_bc.sockfd);
+
     return 0;
 }
 
 
 static int _svr_listen_stop()
 {
+
+    cleansocket(&g_svrbc_listen.sockfd);
+    cleansocket(&g_svr_feedback_sockfd);
+    // cleansocket(&g_svr_shutdown_sockfd);
+
     uv_mutex_lock(&g_svrbc_listen.mutex);
     g_svrbc_listen.pause = true;
     uv_mutex_unlock(&g_svrbc_listen.mutex);
@@ -222,18 +232,7 @@ static int _svr_listen_stop()
 static int _svr_listen_start()
 {
     int ret = 0;
-    uv_mutex_lock(&g_svrbc_listen.mutex);
-    g_svrbc_listen.pause = false;
-    uv_mutex_unlock(&g_svrbc_listen.mutex);
 
-    uv_cond_signal(&g_svrbc_listen.cond);
-
-    return 0;
-}
-
-
-static int _svr_listen_init()
-{
     g_svrbc_listen.sockfd = create_listen_udp_socket(SERVER_PORT);
     if (g_svrbc_listen.sockfd == -1)
     {
@@ -248,6 +247,19 @@ static int _svr_listen_init()
         cleansocket(&g_svrbc_listen.sockfd);
         return -1;
     }
+
+    uv_mutex_lock(&g_svrbc_listen.mutex);
+    g_svrbc_listen.pause = false;
+    uv_mutex_unlock(&g_svrbc_listen.mutex);
+
+    uv_cond_signal(&g_svrbc_listen.cond);
+
+    return 0;
+}
+
+
+static int _svr_listen_init()
+{
 
     g_svrbc_listen.pause = true;
     uv_mutex_init(&g_svrbc_listen.mutex);
@@ -272,11 +284,6 @@ static int _svr_listen_uninit()
     uv_mutex_destroy(&g_svrbc_listen.mutex);
     uv_sem_destroy(&g_svrbc_listen.sem_exit);
 
-
-    cleansocket(&g_svrbc_listen.sockfd);
-    cleansocket(&g_svr_feedback_sockfd);
-    cleansocket(&g_svr_shutdown_sockfd);
-
     return 0;
 }
 
@@ -284,18 +291,12 @@ static int _svr_listen_uninit()
 
 static int _svr_boardcast_init()
 {
-	g_svr_bc.sockfd = create_boardcast_socket();
-	if (g_svr_bc.sockfd == -1)
-	{
-		return -1;
-	}
-
-    g_svr_shutdown_sockfd = create_boardcast_socket();
-    if (g_svr_shutdown_sockfd == -1)
-    {
-        cleansocket(&g_svr_bc.sockfd);
-        return -1;
-    }
+    // g_svr_shutdown_sockfd = create_boardcast_socket();
+    // if (g_svr_shutdown_sockfd == -1)
+    // {
+    //     cleansocket(&g_svr_bc.sockfd);
+    //     return -1;
+    // }
 
 	uv_mutex_init(&g_svr_bc.mutex);
 	uv_cond_init(&g_svr_bc.cond);
@@ -320,8 +321,6 @@ static int _svr_boardcast_uninit()
 	uv_mutex_destroy(&g_svr_bc.mutex);
 	uv_sem_destroy(&g_svr_bc.sem_exit);
 	uv_cond_destroy(&g_svr_bc.cond);
-
-	cleansocket(&g_svr_bc.sockfd);
 
 	return 0;
 }
@@ -376,7 +375,7 @@ int svr_model_stop()
 	_svr_boardcast_stop();
 	_svr_listen_stop();
 
-    // 是否发一下关闭的通知，后续加
+    // 关闭时不通知客户端
 
 	return 0;
 }
