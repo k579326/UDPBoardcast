@@ -120,6 +120,7 @@ tcp_conn_t* cl_conn_find2(const char* ip);
 std::map<uint16_t, tcp_conn_t*> cl_conn_list();
 void cl_conn_clr();
 bool cl_conn_valid(uint16_t connId);
+bool cl_conn_empty();
 
 int cl_task_add(uint64_t taskId, const abs_task_t* task);
 abs_task_t* cl_task_del(uint64_t taskId);

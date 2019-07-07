@@ -14,6 +14,10 @@ static void _clientloop_process(void* param)
 {
     client_loop_t* cl = (client_loop_t*)param;
     while (1) {
+
+        if (cl_conn_empty())
+            ssn_sleep(1);           // 解决客户端无连接情况下CPU占用过高问题
+
         if (!uv_loop_alive(&cl->loop_info.loop))
         {
             break;
@@ -259,6 +263,16 @@ bool cl_conn_valid(uint16_t connId)
     uv_rwlock_rdunlock(&g_ClientLoop.connTable.connLock);
     return flag;
 }
+
+bool cl_conn_empty()
+{
+    bool empty;
+    uv_rwlock_wrlock(&g_ClientLoop.connTable.connLock);
+    empty = g_ClientLoop.connTable.table.empty();
+    uv_rwlock_wrunlock(&g_ClientLoop.connTable.connLock);
+    return empty;
+}
+
 
 
 int cl_task_add(uint64_t taskId, const abs_task_t* task)

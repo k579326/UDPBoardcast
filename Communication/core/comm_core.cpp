@@ -65,7 +65,7 @@ void close_cb(uv_handle_t* handle)
                     loopInfo->conn_cb(conn->connId, conn->info.ip.c_str(), false);
             }
         }
-        delete handle->data;
+        delete conn;
         // delete handle;
     }
     else if (handle->type == UV_TIMER)
@@ -96,7 +96,7 @@ static void _safe_uv_close(uv_handle_t* handle, uv_close_cb cb)
 
 void idle_cb(uv_idle_t* handle)
 {
-    ssn_sleep(1);           // 解决客户端无连接情况下CPU占用过高问题，但损失1-3ms的效率
+    // to nothing
 }
 
 
@@ -139,14 +139,15 @@ static void timer_cb(uv_timer_t* handle)
     abs_task_t* task = cl_task_del(td->taskId);
     if (task != NULL)
     {
-        if (task->type == async_task_type::CONNECT)
-        {
-            uv_connect_t* req = (uv_connect_t*)td->data;
-            _safe_uv_close((uv_handle_t*)req->handle, close_cb);
-            delete req->data;
-            req->data = NULL;
-            delete req;
-        }
+        // if (task->type == async_task_type::CONNECT)
+        // {
+        //     uv_connect_t* req = (uv_connect_t*)td->data;
+        //     _safe_uv_close((uv_handle_t*)req->handle, close_cb);
+        //     delete req->data;
+        //     req->data = NULL;
+        //     uv_cancel((uv_req_t*)req);
+        //     // delete req;
+        // }
         task->err = ERR_TIMEOUT;
         _cl_finish_task(task);
     }
@@ -524,6 +525,21 @@ void connect_cb(uv_connect_t* req, int status)
 {
     conn_req_t* reqData = (conn_req_t*)req->data;
     conn_task_t* task = (conn_task_t*)cl_task_del(reqData->taskId);
+    if (!task)
+    {
+        // 结束请求
+        delete reqData;
+        delete req;
+        return;
+    }
+
+    // 取消定时器
+    timer_data_t* td = cl_timer_del(task->common.taskId);
+    if (td != NULL)
+    {
+        uv_timer_stop(&td->timer);
+        _safe_uv_close((uv_handle_t*)&td->timer, close_cb);
+    }
 
     if (status != 0)
     {
@@ -539,14 +555,6 @@ void connect_cb(uv_connect_t* req, int status)
         client_loop_t* loopInfo = (client_loop_t*)req->handle->loop->data;
         if (loopInfo->conn_cb)
             loopInfo->conn_cb(connId, reqData->conn->info.ip.c_str(), true);
-
-        // 取消定时器
-        timer_data_t* td = cl_timer_del(task->common.taskId);
-        if (td != NULL)
-        {
-            uv_timer_stop(&td->timer);
-            _safe_uv_close((uv_handle_t*)&td->timer, close_cb);
-        }
 
         // 给连接挂上读取请求
         uv_read_start((uv_stream_t*)req->handle, alloc_cb, read_cb);
