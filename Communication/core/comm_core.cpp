@@ -96,7 +96,7 @@ static void _safe_uv_close(uv_handle_t* handle, uv_close_cb cb)
 
 void idle_cb(uv_idle_t* handle)
 {
-    
+    ssn_sleep(1);           // 解决客户端无连接情况下CPU占用过高问题，但损失1-3ms的效率
 }
 
 

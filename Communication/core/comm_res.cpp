@@ -14,7 +14,6 @@ static void _clientloop_process(void* param)
 {
     client_loop_t* cl = (client_loop_t*)param;
     while (1) {
-
         if (!uv_loop_alive(&cl->loop_info.loop))
         {
             break;
@@ -48,7 +47,7 @@ void init_client_loop(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
     g_ClientLoop.loop_info.running = false;
 	uv_rwlock_init(&g_ClientLoop.connTable.connLock);
 	uv_mutex_init(&g_ClientLoop.taskTable.taskLock);
-    uv_mutex_init(&g_ClientLoop.timerTable.timerLock);
+    uv_mutex_init(&g_ClientLoop.timerTable.timerLock); 
 	// uv_thread_create(&g_ClientLoop->thread, NULL, &g_ClientLoop);
 	
     g_ClientLoop.loop_info.loop.data = &g_ClientLoop;

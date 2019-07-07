@@ -82,7 +82,7 @@ struct client_loop_t
     safe_timer_table timerTable;
 	
 	uv_thread_t thread;
-    uv_idle_t no_exit;
+    uv_idle_t no_exit;              // 占用客户端Loop, 使客户端
     ssn_pushmsg_cb pushmsg_cb;
     ssn_conn_changed_cb conn_cb;
 };

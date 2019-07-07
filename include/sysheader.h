@@ -11,12 +11,17 @@
 #define DEPRECATED __declspec(deprecated)
 #endif
 
+#define ssn_sleep(ms) Sleep(ms)
+
 #else
+
 #include <fcntl.h>
 #include <unistd.h>
 #ifndef DEPRECATED
 #define DEPRECATED __attribute__((deprecated))
 #endif
+
+#define ssn_sleep(ms) usleep(ms * 1000)
 
 #endif
 

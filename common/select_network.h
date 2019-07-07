@@ -5,11 +5,11 @@
 
 #pragma once
 
-// ·µ»ØÖµ ÍøÂçÐòIP
+// è¿”å›žå€¼ ç½‘ç»œåºIP
 unsigned long PhyBoardcastAddr();
 
 
-// ·µ»ØÖµ ÍøÂçÐòIP
+// è¿”å›žå€¼ ç½‘ç»œåºIP
 unsigned long PhyIpAddress();
 
 

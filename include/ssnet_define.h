@@ -16,11 +16,11 @@ typedef struct
 #define BOARDCAST_MSG_SHUTDOWN		3
 
 
-#define CONN_TIMEOUT            (1 * 1000)      // TCP���ӳ�ʱ
-#define SVR_BOARDCAST_TIMESPACE (10 * 1000)		// ����˹㲥��� 10s
-#define SVR_BC_LISTEN_TIMESPACE 300             // ����˹㲥������� 300ms
-#define CLT_BC_LISTEN_TIMESPACE 30              // �ͻ��˹㲥������� 30ms
-#define SVR_KEEPALIVE_TIMEOUT   (SVR_BOARDCAST_TIMESPACE * 3)    // ����˶Կͻ������ӵı���ʱ��, 3���Ĺ㲥���
+#define CONN_TIMEOUT            (1 * 1000)      // TCP连接超时
+#define SVR_BOARDCAST_TIMESPACE (10 * 1000)		// 服务端广播间隔 10s
+#define SVR_BC_LISTEN_TIMESPACE 300             // 服务端广播监听间隔 300ms
+#define CLT_BC_LISTEN_TIMESPACE 30              // 客户端广播监听间隔 30ms
+#define SVR_KEEPALIVE_TIMEOUT   (SVR_BOARDCAST_TIMESPACE * 3)    // 服务端对客户端连接的保活时间, 3倍的广播间隔
 
 
 
