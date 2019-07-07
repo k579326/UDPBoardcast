@@ -33,12 +33,11 @@ typedef struct
 }comm_tcp_t;
 
 
-
-
 typedef struct
 {
-    abs_task_t* task;
-    uv_timer_t timer;
+    uint64_t    taskId;
+    uv_timer_t  timer;
+    void*       data;
 }timer_data_t;
 
 typedef struct

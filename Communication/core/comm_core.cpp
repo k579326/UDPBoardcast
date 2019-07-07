@@ -11,7 +11,7 @@
 #include "comm_protocol.h"
 #include "gen_id.h"
 
-#define MAX_RESP_BUF        (1024 * 1024 * 4)
+#define MAX_RESP_BUF        (1024 * 1024 * 4)           // 服务端单次任务返回的数据最大长度不能超过此限制
 
 
 void svr_work_cb(void* param)
@@ -133,27 +133,26 @@ static void _sl_finish_task(abs_task_t* task)
 
 static void timer_cb(uv_timer_t* handle)
 {
-    timer_data_t* data = (timer_data_t*)handle->data;
+    timer_data_t* td = (timer_data_t*)handle->data;
 
-    cl_timer_del(data->task->taskId);
+    cl_timer_del(td->taskId);
+    abs_task_t* task = cl_task_del(td->taskId);
+    if (task != NULL)
+    {
+        if (task->type == async_task_type::CONNECT)
+        {
+            uv_connect_t* req = (uv_connect_t*)td->data;
+            _safe_uv_close((uv_handle_t*)req->handle, close_cb);
+            delete req->data;
+            req->data = NULL;
+            delete req;
+        }
+        task->err = ERR_TIMEOUT;
+        _cl_finish_task(task);
+    }
 
-    // if (data->task->type == async_task_type::CONNECT)
-    // {
-    //     conn_task_t* connTask = (conn_task_t*)data->task;
-    //     conn_req_t* reqData = (conn_req_t*)data->req->data;
-    //     uv_close((uv_handle_t*)reqData->conn->tcp.handle, close_cb);
-    //     delete reqData->conn;
-    //     delete reqData;
-    // }
     _safe_uv_close((uv_handle_t*)handle, close_cb);
     
-    data->task->err = ERR_TIMEOUT;
-    _cl_finish_task(data->task);
-    //delete data->timer;
-    //delete data->req;
-    data->task = NULL;
-    //data->req = NULL;
-
     return;
 }
 
@@ -183,7 +182,7 @@ static void write_cb(uv_write_t* req, int status)
                 uv_timer_init(req->handle->loop, &td->timer);
                 uv_timer_start(&td->timer, timer_cb, rw_task->timeout, 0);
                 td->timer.data = td;
-                td->task = (abs_task_t*)rw_task;
+                td->taskId = rw_task->common.taskId;
                 // 定时器放到timer队列
                 cl_timer_add(task->taskId, td);
             }
@@ -515,23 +514,21 @@ exit:
 
 typedef struct
 {
-    conn_task_t* task;
+    uint64_t taskId;
     tcp_conn_t* conn;
 }conn_req_t;
 
 
-// 客户端连接回调
+// 客户端连接回调, 如果回调成功，表示定时器还未超时
 void connect_cb(uv_connect_t* req, int status)
 {
     conn_req_t* reqData = (conn_req_t*)req->data;
-    conn_task_t* task = reqData->task;
+    conn_task_t* task = (conn_task_t*)cl_task_del(reqData->taskId);
 
     if (status != 0)
     {
         _safe_uv_close((uv_handle_t*)req->handle, close_cb);
         task->common.err = uverr_convert(status);
-        // tcp_conn_t要在close_cb中释放
-        // delete reqData->conn;
     }
     else
     {
@@ -542,6 +539,14 @@ void connect_cb(uv_connect_t* req, int status)
         client_loop_t* loopInfo = (client_loop_t*)req->handle->loop->data;
         if (loopInfo->conn_cb)
             loopInfo->conn_cb(connId, reqData->conn->info.ip.c_str(), true);
+
+        // 取消定时器
+        timer_data_t* td = cl_timer_del(task->common.taskId);
+        if (td != NULL)
+        {
+            uv_timer_stop(&td->timer);
+            _safe_uv_close((uv_handle_t*)&td->timer, close_cb);
+        }
 
         // 给连接挂上读取请求
         uv_read_start((uv_stream_t*)req->handle, alloc_cb, read_cb);
@@ -575,7 +580,7 @@ static int _do_connect(abs_task_t* task)
 
     conn_req_t* reqData = new conn_req_t;
     reqData->conn = new tcp_conn_t;
-    reqData->task = ct;
+    reqData->taskId = ct->common.taskId;
     reqData->conn->info.ip = ct->ip;
     reqData->conn->info.port = ct->port;
 
@@ -606,16 +611,18 @@ static int _do_connect(abs_task_t* task)
         return -1;
     }
 
-    // 计时器关闭时如何释放需要考虑
-    // timer_data_t* td = new timer_data_t;
-    // uv_timer_t* timer = new uv_timer_t;
-    // uv_timer_init(reqData->conn->tcp.handle->loop, timer);
-    // uv_timer_start(timer, timer_cb, ct->timeout, 0);
-    // td->task = (abs_task_t*)ct;
-    // td->timer = timer;
-    // td->req = (uv_req_t*)req;
-    // timer->data = td;
-
+    if (ct->timeout > 0)
+    {
+        timer_data_t* td = new timer_data_t;
+        uv_timer_init(reqData->conn->tcp.handle.loop, &td->timer);
+        uv_timer_start(&td->timer, timer_cb, ct->timeout, 0);
+        td->taskId = ct->common.taskId;
+        td->data = req;
+        td->timer.data = td;
+        // 定时器放到timer队列
+        cl_timer_add(task->taskId, td);
+    }
+    
     // 将timer放到timer队列中，taskId作为key，timer_data_t*为value
 
     return 0;
