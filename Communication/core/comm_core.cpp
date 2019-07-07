@@ -78,11 +78,13 @@ void close_cb(uv_handle_t* handle)
     }
     else
     {
-        assert(0);
+        // assert(0);
     }
 
     return;
 }
+
+
 
 static void _safe_uv_close(uv_handle_t* handle, uv_close_cb cb)
 {
@@ -90,6 +92,13 @@ static void _safe_uv_close(uv_handle_t* handle, uv_close_cb cb)
         uv_close(handle, cb);
     return;
 }
+
+
+void idle_cb(uv_idle_t* handle)
+{
+    
+}
+
 
 
 static void _cl_finish_task(abs_task_t* task)
@@ -635,6 +644,114 @@ static void _do_push(abs_task_t* task)
 }
 
 
+static void _client_shutdown(client_loop_t* loopInfo)
+{
+    uv_mutex_t condlock;
+    uv_cond_t cond;
+
+    uv_mutex_init(&condlock);
+    uv_cond_init(&cond);
+
+    loopInfo->loop_info.running = false;
+
+    uv_mutex_lock(&condlock);
+    uv_cond_timedwait(&cond, &condlock, 500);   // 等待500毫秒，接收已经投递的任务
+    uv_mutex_unlock(&condlock);
+
+    //uv_run(&loopInfo->loop_info.loop, UV_RUN_DEFAULT);
+
+    std::map<uint16_t, tcp_conn_t*> allconn = cl_conn_list();
+    std::map<uint16_t, tcp_conn_t*>::iterator it_conn;
+    for (it_conn = allconn.begin(); it_conn != allconn.end(); it_conn++)
+    {
+        uv_read_stop((uv_stream_t*)&it_conn->second->tcp.handle);
+        _safe_uv_close((uv_handle_t*)&it_conn->second->tcp.handle, close_cb);
+    }
+
+    std::map<uint64_t, timer_data_t*> alltimer = cl_list_timer();
+    std::map<uint64_t, timer_data_t*>::iterator it_timer;
+    for (it_timer = alltimer.begin(); it_timer != alltimer.end(); it_timer++)
+    {
+        _safe_uv_close((uv_handle_t*)&it_timer->second->timer, close_cb);
+    }
+    //uv_run(&loopInfo->loop_info.loop, UV_RUN_DEFAULT);
+    cl_timer_clr();
+    cl_conn_clr();
+
+    std::map<uint64_t, abs_task_t*> alltask = cl_list_task();
+    std::map<uint64_t, abs_task_t*>::iterator it_task;
+    for (it_task = alltask.begin(); it_task != alltask.end(); it_task++)
+    {
+        it_task->second->err = ERR_SHUTDOWN;
+        _cl_finish_task(it_task->second);
+    }
+    // uv_run(&loopInfo->loop_info.loop, UV_RUN_DEFAULT);
+    cl_task_clr();
+
+    // _safe_uv_close((uv_handle_t*)&loopInfo->no_exit, close_cb);
+    uv_mutex_destroy(&condlock);
+    uv_cond_destroy(&cond);
+    return;
+}
+
+static void _server_shutdown(server_loop_t* loopInfo)
+{
+    uv_mutex_t condlock;
+    uv_cond_t cond;
+
+    uv_mutex_init(&condlock);
+    uv_cond_init(&cond);
+
+    loopInfo->loop_info.running = false;
+    _safe_uv_close((uv_handle_t*)&loopInfo->listen, close_cb);
+
+    std::map<uint16_t, tcp_conn_t*> allconn =  sl_conn_list();
+    std::map<uint16_t, tcp_conn_t*>::iterator it;
+    for (it = allconn.begin(); it != allconn.end(); it++)
+    {
+        uv_read_stop((uv_stream_t*)&it->second->tcp.handle);
+    }
+
+    // uv_run(&loopInfo->loop_info.loop, UV_RUN_DEFAULT);
+
+    uv_mutex_lock(&condlock);
+    uv_cond_timedwait(&cond, &condlock, 800);   // 等待800毫秒，让线程池任务尽量完成
+    uv_mutex_unlock(&condlock);
+    // uv_run(&loopInfo->loop_info.loop, UV_RUN_DEFAULT);
+
+    threadpool_uninit(loopInfo->pool);
+
+    for (it = allconn.begin(); it != allconn.end(); it++)
+    {
+        _safe_uv_close((uv_handle_t*)&it->second->tcp.handle, close_cb);
+    }
+    sl_conn_clr();
+
+    uv_mutex_destroy(&condlock);
+    uv_cond_destroy(&cond);
+
+    return;
+}
+
+static void _do_shutdown(loop_info_t* loopInfo)
+{
+    if (loopInfo->type == CLIENT_LOOP)
+    {
+        _client_shutdown((client_loop_t*)loopInfo);
+    }
+    else if (loopInfo->type == SERVER_LOOP)
+    {
+        _server_shutdown((server_loop_t*)loopInfo);
+    }
+    else
+    {
+        assert(0);
+    }
+}
+
+
+
+
 void async_cb(uv_async_t* handle)
 {
     int err;
@@ -692,6 +809,27 @@ void async_cb(uv_async_t* handle)
         if (err != 0){
             _cl_finish_task(task);
         }
+        break;
+    }
+    case async_task_type::CLOSE:
+    {
+        loop_info_t* loopInfo = (loop_info_t*)handle->loop->data;
+
+        _do_shutdown(loopInfo);
+
+        if (loopInfo->type == CLIENT_LOOP)
+        {
+            _cl_finish_task(task);
+        }
+        else if(loopInfo->type == SERVER_LOOP)
+        {
+            _sl_finish_task(task);
+        }
+        else
+        {
+            assert(0);
+        }
+
         break;
     }
     default:

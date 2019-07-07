@@ -103,10 +103,10 @@ int main()
     nd_set_running_type(CLT_RUN_TYPE);
 
 
-    uv_sem_t sem;
-    uv_sem_init(&sem, 1);
-    uv_sem_wait(&sem);
-    uv_sem_wait(&sem);
+    getchar();
+
+    ssn_shutdown_client();
+    nd_boardcast_uninit();
     
     return 0;
 }

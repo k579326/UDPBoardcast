@@ -145,19 +145,18 @@ static int _threadpool_cancel_all(threadpool_t* tp)
     thread_param_t outbuf;
 	int outlen = sizeof(thread_param_t);
 	
-    uv_sem_post(&tp->exit_sem);
+    for (i = 0; i < tp->thread_num; i++)
+    {
+        uv_sem_post(&tp->exit_sem);
+    }
 
     uv_mutex_lock(&tp->mutex);
     uv_cond_broadcast(&tp->cond);
-
 	// 清理任务队列
 	easy_queue_clear(tp->queue);
-	easy_queue_uninit(tp->queue);
-	tp->queue = NULL;
-	
     uv_mutex_unlock(&tp->mutex);
 
-    for (; i < tp->thread_num; i++)
+    for (i = 0; i < tp->thread_num; i++)
     {
         uv_thread_join(&tp->threads[i]);
     }
@@ -170,6 +169,8 @@ int threadpool_uninit(threadpool_t* tp)
 {
     _threadpool_cancel_all(tp);
 
+    easy_queue_uninit(tp->queue);
+    tp->queue = NULL;
     uv_sem_destroy(&tp->exit_sem);
     uv_mutex_destroy(&tp->mutex);
     uv_cond_destroy(&tp->cond);

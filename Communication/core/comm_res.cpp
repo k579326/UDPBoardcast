@@ -10,20 +10,14 @@ static client_loop_t g_ClientLoop;
 static server_loop_t g_serverLoop;
 
 
-static void _noIdle(client_loop_t* cl)
-{
-    uv_mutex_lock(&cl->condlock);
-    uv_cond_wait(&cl->cond, &cl->condlock);
-    uv_mutex_unlock(&cl->condlock);
-}
-
 static void _clientloop_process(void* param)
 {
     client_loop_t* cl = (client_loop_t*)param;
     while (1) {
 
-        if (cl->connTable.table.empty()){
-            //_noIdle(cl);
+        if (!uv_loop_alive(&cl->loop_info.loop))
+        {
+            break;
         }
         uv_run(&cl->loop_info.loop, UV_RUN_DEFAULT);
     }
@@ -55,9 +49,6 @@ void init_client_loop(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
 	uv_rwlock_init(&g_ClientLoop.connTable.connLock);
 	uv_mutex_init(&g_ClientLoop.taskTable.taskLock);
     uv_mutex_init(&g_ClientLoop.timerTable.timerLock);
-
-    uv_mutex_init(&g_ClientLoop.condlock);
-    uv_cond_init(&g_ClientLoop.cond);
 	// uv_thread_create(&g_ClientLoop->thread, NULL, &g_ClientLoop);
 	
     g_ClientLoop.loop_info.loop.data = &g_ClientLoop;
@@ -69,16 +60,8 @@ void init_client_loop(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
 
 int start_client_loop()
 {
-    if (g_ClientLoop.loop_info.running)
-    {
-        return 0;
-    }
-
-    if (!g_ClientLoop.loop_info.inited)
-    {
-        return -1;
-    }
-
+    uv_idle_init(&g_ClientLoop.loop_info.loop, &g_ClientLoop.no_exit);
+    uv_idle_start(&g_ClientLoop.no_exit, idle_cb);
     uv_thread_create(&g_ClientLoop.thread, _clientloop_process, &g_ClientLoop);
     g_ClientLoop.loop_info.running = true;
     
@@ -89,16 +72,10 @@ int start_client_loop()
 
 int stop_client_loop()
 {
-    if (!g_ClientLoop.loop_info.running)
-    {
-        return 0;
-    }
-
-    if (!g_ClientLoop.loop_info.inited)
-    {
-        return -1;
-    }
-
+    g_ClientLoop.loop_info.running = false;
+    uv_idle_stop(&g_ClientLoop.no_exit);
+    uv_close((uv_handle_t*)&g_ClientLoop.no_exit, close_cb);
+    uv_thread_join(&g_ClientLoop.thread);
 
     return 0;
 }
@@ -106,7 +83,13 @@ int stop_client_loop()
 int uninit_client_loop()
 {
 	// stop loop
-	
+    stop_client_loop();
+    uv_loop_close(&g_ClientLoop.loop_info.loop);
+    uv_rwlock_destroy(&g_ClientLoop.connTable.connLock);
+    uv_mutex_destroy(&g_ClientLoop.taskTable.taskLock);
+    uv_mutex_destroy(&g_ClientLoop.timerTable.timerLock);
+
+    g_ClientLoop.loop_info.inited = false;
     return 0;
 }
 
@@ -254,6 +237,14 @@ std::map<uint16_t, tcp_conn_t*> cl_conn_list()
     return list;
 }
 
+void cl_conn_clr()
+{
+    uv_rwlock_wrlock(&g_ClientLoop.connTable.connLock);
+    g_ClientLoop.connTable.table.clear();
+    uv_rwlock_wrunlock(&g_ClientLoop.connTable.connLock);
+}
+
+
 bool cl_conn_valid(uint16_t connId)
 {
     bool flag = false;
@@ -310,6 +301,16 @@ abs_task_t* cl_task_find(uint64_t taskId)
     return task;
 }
 
+std::map<uint64_t, abs_task_t*> cl_list_task()
+{
+    return g_ClientLoop.taskTable.table;
+}
+void cl_task_clr()
+{
+    g_ClientLoop.taskTable.table.clear();
+}
+
+
 int cl_timer_add(uint64_t taskId, const timer_data_t* timer)
 {
     //uv_mutex_lock(&g_ClientLoop.timerTable.timerLock);
@@ -347,6 +348,14 @@ timer_data_t* cl_timer_find(uint64_t taskId)
     return timer;
 }
 
+std::map<uint64_t, timer_data_t*> cl_list_timer()
+{
+    return g_ClientLoop.timerTable.table;
+}
+void cl_timer_clr()
+{
+    g_ClientLoop.timerTable.table.clear();
+}
 
 
 static int _init_svr_tcp(uv_tcp_t* svrTcp)
@@ -387,7 +396,7 @@ exit:
 
 
 
-void init_server_loop()
+void init_server_loop(ssn_work_process_cb cb, size_t workthread_num)
 {
     uv_loop_init(&g_serverLoop.loop_info.loop);
 
@@ -396,6 +405,8 @@ void init_server_loop()
 
     // uv_thread_create(&g_ClientLoop->thread, NULL, &g_ClientLoop);
 
+    threadpool_init(&g_serverLoop.pool, workthread_num);
+    g_serverLoop.work_cb = cb;
     g_serverLoop.loop_info.loop.data = &g_serverLoop;
     g_serverLoop.loop_info.inited = true;
     g_serverLoop.loop_info.running = false;
@@ -403,18 +414,9 @@ void init_server_loop()
     return;
 }
 
-int start_server_loop(ssn_work_process_cb cb, size_t workthread_num)
+int start_server_loop()
 {
     int err;
-    if (g_serverLoop.loop_info.running)
-    {
-        return 0;
-    }
-
-    if (!g_serverLoop.loop_info.inited)
-    {
-        return -1;
-    }
 
     err = _init_svr_tcp(&g_serverLoop.listen);
     if (err != 0){
@@ -422,8 +424,6 @@ int start_server_loop(ssn_work_process_cb cb, size_t workthread_num)
     }
     g_serverLoop.listen.data = NULL; 
 
-    threadpool_init(&g_serverLoop.pool, workthread_num);
-    g_serverLoop.work_cb = cb;
     uv_thread_create(&g_serverLoop.thread, _serverloop_process, &g_serverLoop);
     g_serverLoop.loop_info.running = true;
     
@@ -435,13 +435,23 @@ int start_server_loop(ssn_work_process_cb cb, size_t workthread_num)
 
 int stop_server_loop()
 {
-    
+    // uv_close((uv_handle_t*)&g_serverLoop.listen, close_cb);
+    g_serverLoop.loop_info.running = false;
+    uv_thread_join(&g_serverLoop.thread);
     return 0;
 }
 
 
 int uninit_server_loop()
 {
+    stop_server_loop();
+
+    // threadpool_uninit(g_serverLoop.pool);
+    uv_rwlock_destroy(&g_serverLoop.connTable.connLock);
+    // uv_thread_create(&g_ClientLoop->thread, NULL, &g_ClientLoop);
+    uv_loop_close(&g_serverLoop.loop_info.loop);
+    g_serverLoop.loop_info.inited = false;
+
     return 0;
 }
 
@@ -539,6 +549,13 @@ std::map<uint16_t, tcp_conn_t*> sl_conn_list()
     list = g_serverLoop.connTable.table;
     uv_rwlock_rdunlock(&g_serverLoop.connTable.connLock);
     return list;
+}
+
+void sl_conn_clr()
+{
+    uv_rwlock_wrlock(&g_serverLoop.connTable.connLock);
+    g_serverLoop.connTable.table.clear();
+    uv_rwlock_wrunlock(&g_serverLoop.connTable.connLock);
 }
 
 uv_loop_t* sl_loop()

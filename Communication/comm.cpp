@@ -14,10 +14,24 @@ int ssn_startup_client(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
     return start_client_loop();
 }
 
+int ssn_shutdown_client()
+{
+    async_close_client();
+    return uninit_client_loop();
+}
+
+
+
 int ssn_startup_server(ssn_work_process_cb cb, size_t workthread_num)
 {
-    init_server_loop();
-    return start_server_loop(cb, workthread_num);
+    init_server_loop(cb, workthread_num);
+    return start_server_loop();
+}
+
+int ssn_shutdown_server()
+{
+    async_close_server();
+    return uninit_server_loop();
 }
 
 

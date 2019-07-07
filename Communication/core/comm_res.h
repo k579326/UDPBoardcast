@@ -82,9 +82,7 @@ struct client_loop_t
     safe_timer_table timerTable;
 	
 	uv_thread_t thread;
-    uv_mutex_t  condlock;
-    uv_cond_t   cond;
-
+    uv_idle_t no_exit;
     ssn_pushmsg_cb pushmsg_cb;
     ssn_conn_changed_cb conn_cb;
 };
@@ -121,16 +119,20 @@ void cl_conn_del2(const tcp_conn_t* conn);
 tcp_conn_t* cl_conn_find(uint16_t connId);
 tcp_conn_t* cl_conn_find2(const char* ip);
 std::map<uint16_t, tcp_conn_t*> cl_conn_list();
+void cl_conn_clr();
 bool cl_conn_valid(uint16_t connId);
 
 int cl_task_add(uint64_t taskId, const abs_task_t* task);
 abs_task_t* cl_task_del(uint64_t taskId);
 abs_task_t* cl_task_find(uint64_t taskId);
+std::map<uint64_t, abs_task_t*> cl_list_task();
+void cl_task_clr();
 
 int cl_timer_add(uint64_t taskId, const timer_data_t* timer);
 timer_data_t* cl_timer_del(uint64_t taskId);
 timer_data_t* cl_timer_find(uint64_t taskId);
-
+std::map<uint64_t, timer_data_t*> cl_list_timer();
+void cl_timer_clr();
 
 
 uv_loop_t* cl_loop();
@@ -139,8 +141,8 @@ uv_async_t* cl_create_async();
 
 
 
-void init_server_loop();
-int start_server_loop(ssn_work_process_cb cb, size_t workthread_num);
+void init_server_loop(ssn_work_process_cb cb, size_t workthread_num);
+int start_server_loop();
 int uninit_server_loop();
 
 
@@ -149,6 +151,7 @@ tcp_conn_t* sl_conn_del(uint16_t connId);
 void sl_conn_del2(const tcp_conn_t* conn);
 tcp_conn_t* sl_conn_find(uint16_t connId);
 std::map<uint16_t, tcp_conn_t*> sl_conn_list();
+void sl_conn_clr();
 
 uv_loop_t* sl_loop();
 uv_async_t* sl_create_async();

@@ -48,12 +48,14 @@ int main()
     nd_boardcast_init();
     nd_set_running_type(SVR_RUN_TYPE);
 
+    getchar();
 
-
-    uv_sem_t sem;
-    uv_sem_init(&sem, 1);
-    uv_sem_wait(&sem);
-    uv_sem_wait(&sem);
+    ssn_shutdown_server();
+    nd_boardcast_uninit();
+    //uv_sem_t sem;
+    //uv_sem_init(&sem, 1);
+    //uv_sem_wait(&sem);
+    //uv_sem_wait(&sem);
 
     return 0;
 }

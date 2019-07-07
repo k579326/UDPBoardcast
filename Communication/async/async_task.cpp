@@ -134,6 +134,54 @@ int async_push(const void* indata, int inlen)
 }
 
 
+int async_close_client()
+{
+    uv_async_t* async = cl_create_async();
+    if (!async)
+    {
+        return ERR_NOT_READY;
+    }
+
+    close_task_t task;
+
+    task.common.type = async_task_type::CLOSE;
+    task.common.taskId = 0;
+    uv_sem_init(&task.common.notify, 1);
+    uv_sem_wait(&task.common.notify);
+    async->data = (void*)& task;
+    // 发送异步任务
+    uv_async_send(async);
+
+    // 等待处理完成
+    uv_sem_wait(&task.common.notify);
+
+    uv_sem_destroy(&task.common.notify);
+    return task.common.err;
+}
+int async_close_server()
+{
+    uv_async_t* async = sl_create_async();
+    if (!async)
+    {
+        return ERR_NOT_READY;
+    }
+
+    close_task_t task;
+
+    task.common.type = async_task_type::CLOSE;
+    task.common.taskId = 0;
+    uv_sem_init(&task.common.notify, 1);
+    uv_sem_wait(&task.common.notify);
+    async->data = (void*)& task;
+    // 发送异步任务
+    uv_async_send(async);
+
+    // 等待处理完成
+    uv_sem_wait(&task.common.notify);
+
+    uv_sem_destroy(&task.common.notify);
+    return task.common.err;
+}
 
 
 

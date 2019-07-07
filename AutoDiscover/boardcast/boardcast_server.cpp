@@ -277,7 +277,11 @@ static int _svr_listen_uninit()
     uv_sem_post(&g_svrbc_listen.sem_exit);
 
     // 唤醒挂起的线程
-    _svr_listen_start();
+    uv_mutex_lock(&g_svrbc_listen.mutex);
+    g_svrbc_listen.pause = false;
+    uv_mutex_unlock(&g_svrbc_listen.mutex);
+    uv_cond_signal(&g_svrbc_listen.cond);
+
     uv_thread_join(&g_svrbc_listen.thread);
 
     uv_cond_destroy(&g_svrbc_listen.cond);
@@ -314,7 +318,11 @@ static int _svr_boardcast_uninit()
     uv_sem_post(&g_svr_bc.sem_exit);
     
     // 唤醒广播线程
-    _svr_boardcast_start();
+    uv_mutex_lock(&g_svr_bc.mutex);
+    g_svr_bc.pause = false;
+    uv_mutex_unlock(&g_svr_bc.mutex);
+    uv_cond_signal(&g_svr_bc.cond);
+    g_slp.wakeup();
 
 	uv_thread_join(&g_svr_bc.thread); // 不等待子线程，可能发生崩溃
 

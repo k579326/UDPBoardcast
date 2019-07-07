@@ -11,8 +11,8 @@ int async_conn(const char* ip, short port, uint32_t timeout);
 
 int async_push(const void* indata, int inlen);
 
-
-
+int async_close_client();
+int async_close_server();
 
 
 
