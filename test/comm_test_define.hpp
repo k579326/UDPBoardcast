@@ -24,7 +24,7 @@ public:
     void AddConn(uint16_t connId, const std::string& ip)
     {
         uv_mutex_lock(&connListLock);
-        auto it = connList.find(connId);
+        std::map < uint16_t, std::string>::iterator it = connList.find(connId);
         if (it == connList.end()){ 
             connList.insert(std::pair<uint16_t, std::string>(connId, ip));
         }
@@ -35,7 +35,7 @@ public:
     {
         std::string x;
         uv_mutex_lock(&connListLock);
-        auto it = connList.find(connId);
+        std::map < uint16_t, std::string>::iterator it = connList.find(connId);
         if (it != connList.end())
         {
             x = it->second;

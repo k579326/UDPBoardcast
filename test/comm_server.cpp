@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "discover.h"
 #include "Communication/comm.h"
-
+#include "sysheader.h"
 #include "uv.h"
 
 void _server_msg_handler(const void* indata, int inlen, void* outdata, int* outlen)
@@ -31,7 +31,7 @@ void server_thread(void* param)
     while (1)
     {
         ssn_push(pushmsg, strlen(pushmsg));
-        Sleep(2000);
+        ssn_sleep(2000);
     }
 }
 

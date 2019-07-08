@@ -1,4 +1,8 @@
 
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
 #include <assert.h>
 #include <stdint.h>
 #include <vector>
@@ -48,7 +52,7 @@ void close_cb(uv_handle_t* handle)
         if (conn && conn->tcp.type == TCP_CLIENT)
         {
             // client tcp free cache
-            delete[] conn->tcp.cache;
+            delete[] (char*)conn->tcp.cache;
             conn->tcp.cache = NULL;
             conn->tcp.maxlength = 0;
             conn->tcp.length = 0;
@@ -70,7 +74,7 @@ void close_cb(uv_handle_t* handle)
     }
     else if (handle->type == UV_TIMER)
     {
-        delete handle->data;
+        delete (char*)handle->data;
     }
     else if (handle->type == UV_ASYNC)
     {
@@ -192,7 +196,7 @@ static void write_cb(uv_write_t* req, int status)
         break;
 
     case PUSH:
-        delete req->data;       // 推送任务要释放
+        delete (char*)req->data;       // 推送任务要释放
         break;
     case RESP:
         ret = uverr_convert(status);
@@ -273,7 +277,7 @@ static void _read_content_process(uv_tcp_t* handle, int size, const void* conten
     }
 
     if (tcp->maxlength < remainsize){
-        delete[] tcp->cache;
+        delete[](char*)tcp->cache;
         tcp->cache = new char[remainsize];
         tcp->maxlength = remainsize;
     }
@@ -345,7 +349,7 @@ static void _read_content_process(uv_tcp_t* handle, int size, const void* conten
     }
 
 
-    delete[] pkgs;
+    delete[](char*)pkgs;
     return;
 }
 
@@ -474,13 +478,13 @@ static int _do_write(tcp_conn_t* conn, string& indata, abs_task_t* task)
 
     // build proto package
     uint8_t pkg_type;
-    if (task->type == async_task_type::RW){
+    if (task->type == RW){
         pkg_type = PKG_TYPE_COMMON;
     }
-    else if (task->type == async_task_type::PUSH){
+    else if (task->type == PUSH){
         pkg_type = PKG_TYPE_PUSH;
     }
-    else if (task->type == async_task_type::RESP)
+    else if (task->type == RESP)
     {
         pkg_type = PKG_TYPE_COMMON;
     }
@@ -647,7 +651,7 @@ static void _do_push(abs_task_t* task)
          it != connList.end(); it++)
     {
         push_task_t* elementTask = new push_task_t;
-        elementTask->common.type = async_task_type::PUSH;
+        elementTask->common.type = PUSH;
         if (_do_write(it->second, pushTask->indata, (abs_task_t*)elementTask) != 0)
         {
             delete elementTask;
@@ -797,7 +801,7 @@ void async_cb(uv_async_t* handle)
 
     switch (task->type)
     {
-    case async_task_type::RW:
+    case RW:
     {
         // 放入任务队列
         cl_task_add(task->taskId, (abs_task_t*)task);
@@ -815,7 +819,7 @@ void async_cb(uv_async_t* handle)
         }
         break;
     }
-    case async_task_type::RESP:
+    case RESP:
     {
         resp_task_t* resptask = (resp_task_t*)task;
         tcp_conn_t* conn = sl_conn_find(resptask->connId);
@@ -833,13 +837,13 @@ void async_cb(uv_async_t* handle)
         }
         break;
     }
-    case async_task_type::PUSH:
+    case PUSH:
     {
         _do_push(task);
         _sl_finish_task(task);
         break;
     }
-    case async_task_type::CONNECT:
+    case CONNECT:
     {
         // 放入任务队列
         cl_task_add(task->taskId, (abs_task_t*)task);
@@ -849,7 +853,7 @@ void async_cb(uv_async_t* handle)
         }
         break;
     }
-    case async_task_type::CLOSE:
+    case CLOSE:
     {
         _do_shutdown(loopInfo);
 

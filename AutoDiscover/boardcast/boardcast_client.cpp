@@ -28,7 +28,7 @@ static void _oriented_feedback_alive(const std::string& ip)
 
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr = StringToNetIp(ip.c_str());
-    server_addr.sin_port = htons(SERVER_PORT);
+    server_addr.sin_port = htons(SERVER_BOARDCAST_PORT);
 
     make_keepalive_pkg(&pkg);
 
@@ -121,7 +121,7 @@ static int _client_startup_boardcast()
 
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = PhyBoardcastAddr();
-	server_addr.sin_port = htons(SERVER_PORT);
+	server_addr.sin_port = htons(SERVER_BOARDCAST_PORT);
 
     make_startup_pkg(&pkg);
 
@@ -190,7 +190,7 @@ int clt_model_start()
 {
 	int ret = 0;
 
-    g_cltbc_listen.sockfd = create_listen_udp_socket(CLIENT_PORT);
+    g_cltbc_listen.sockfd = create_listen_udp_socket(CLIENT_BOARDCAST_PORT);
     if (g_cltbc_listen.sockfd == -1)
     {
         ret = -1;  // TODO:

@@ -54,8 +54,8 @@ void client_send_msg(void* param)
 
     while (1)
     {
-        auto connMap = connmgr.GetAllConn();
-        for (auto it = connMap.begin(); it != connMap.end(); it++)
+        std::map < uint16_t, std::string> connMap = connmgr.GetAllConn();
+        for (std::map < uint16_t, std::string>::iterator it = connMap.begin(); it != connMap.end(); it++)
         {
             int outlen = 256;
             char outstr[256] = { 0 };
@@ -77,7 +77,7 @@ void client_send_msg(void* param)
             }
         }
         
-        Sleep(200);
+        ssn_sleep(200);
     }
 }
 

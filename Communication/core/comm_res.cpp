@@ -376,7 +376,7 @@ static int _init_svr_tcp(uv_tcp_t* svrTcp)
 
     sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_addr.S_un.S_addr = PhyIpAddress();
+    addr.sin_addr.s_addr = PhyIpAddress();
     addr.sin_port = htons(SERVER_TCP_PORT);
 
     err = uv_tcp_init_ex(&g_serverLoop.loop_info.loop, svrTcp, AF_INET);

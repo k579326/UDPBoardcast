@@ -1,4 +1,7 @@
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "comm_define.h"
 #include "async_task.h"
@@ -24,7 +27,7 @@ int async_send(uint16_t connId, const void* indata, int inlen, void** outdata, i
 
     rw_task_t task;
 
-    task.common.type = async_task_type::RW;
+    task.common.type = RW;
     task.connId = connId;
     task.timeout = timeout;
     task.indata.assign((const char*)indata, inlen);
@@ -74,7 +77,7 @@ int async_conn(const char* ip, short port, uint32_t timeout)
     task.timeout = timeout;
     strcpy(task.ip, ip);
     task.port = port;
-    task.common.type = async_task_type::CONNECT;
+    task.common.type = CONNECT;
     uv_sem_init(&task.common.notify, 1);
     uv_sem_wait(&task.common.notify);
     task.common.taskId = ApplyTaskId(); 
@@ -107,7 +110,7 @@ int async_push(const void* indata, int inlen)
 
     push_task_t task;
 
-    task.common.type = async_task_type::PUSH;
+    task.common.type = PUSH;
     task.common.taskId = 0;
     task.indata.assign((char*)indata, inlen);
     uv_sem_init(&task.common.notify, 1);
@@ -140,7 +143,7 @@ int async_close_client()
 
     close_task_t task;
 
-    task.common.type = async_task_type::CLOSE;
+    task.common.type = CLOSE;
     task.common.taskId = 0;
     uv_sem_init(&task.common.notify, 1);
     uv_sem_wait(&task.common.notify);
@@ -164,7 +167,7 @@ int async_close_server()
 
     close_task_t task;
 
-    task.common.type = async_task_type::CLOSE;
+    task.common.type = CLOSE;
     task.common.taskId = 0;
     uv_sem_init(&task.common.notify, 1);
     uv_sem_wait(&task.common.notify);
