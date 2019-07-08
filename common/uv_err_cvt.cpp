@@ -7,21 +7,26 @@
 #include "sysheader.h"
 
 
-static std::map<int, std::string> g_errmsg =
+class ERRMAP
 {
-    {0, "success"},
-    {ERR_PARAM, "invalid param"},
-    {ERR_NOT_READY, "net module state wrong"},
-    {ERR_CONN_NOT_EXIST, "connect is lost"},
-    {ERR_CONN_ALREADY_EXIST, "connnect already exist, can't connect again"},
-    {ERR_TIMEOUT, "operation timeout"},
+public:
+    ERRMAP(){
+        errmsg[0] = "success";
+
+        errmsg[ERR_PARAM] = "invalid param";
+        errmsg[ERR_NOT_READY] = "net module state wrong";
+        errmsg[ERR_CONN_NOT_EXIST] = "connect is lost";
+        errmsg[ERR_CONN_ALREADY_EXIST] = "connnect already exist, can't connect again";
+        errmsg[ERR_TIMEOUT] = "operation timeout";
+        errmsg[ERR_COMM_PROTO_VERSION] = "communication version error";
+        errmsg[ERR_BAD_COMM_PACKAGE] = "bad communication package";
+    }
 
 
-    {ERR_COMM_PROTO_VERSION, "communication version error"},
-    {ERR_BAD_COMM_PACKAGE, "bad communication package"}
+    std::map<int, std::string> errmsg;
 };
 
-
+static ERRMAP g_errmap;
 
 int uverr_convert(int uverr)
 {
@@ -31,5 +36,5 @@ int uverr_convert(int uverr)
 
 const char* ssn_errmsg(int err)
 {
-    return g_errmsg[err].c_str();
+    return g_errmap.errmsg[err].c_str();
 }
