@@ -96,7 +96,7 @@ static void _safe_uv_close(uv_handle_t* handle, uv_close_cb cb)
 
 void idle_cb(uv_idle_t* handle)
 {
-    // to nothing
+    // do nothing
 }
 
 
@@ -762,6 +762,7 @@ static void _do_shutdown(loop_info_t* loopInfo)
     {
         assert(0);
     }
+    loopInfo->running = false;
 }
 
 
@@ -771,6 +772,28 @@ void async_cb(uv_async_t* handle)
 {
     int err;
     abs_task_t* task = (abs_task_t*)handle->data;
+    loop_info_t* loopInfo = (loop_info_t*)handle->loop->data;
+
+    if (!loopInfo->running || !loopInfo->inited)
+    {
+        task->err = ERR_NOT_READY;
+        if (loopInfo->type == CLIENT_LOOP)
+        {
+            _cl_finish_task(task);
+        }
+        else if (loopInfo->type == SERVER_LOOP)
+        {
+            _sl_finish_task(task);
+        }
+        else
+        {
+            assert(0);
+        }
+        _safe_uv_close((uv_handle_t*)handle, close_cb);
+        return;
+    }
+
+
 
     switch (task->type)
     {
@@ -828,8 +851,6 @@ void async_cb(uv_async_t* handle)
     }
     case async_task_type::CLOSE:
     {
-        loop_info_t* loopInfo = (loop_info_t*)handle->loop->data;
-
         _do_shutdown(loopInfo);
 
         if (loopInfo->type == CLIENT_LOOP)

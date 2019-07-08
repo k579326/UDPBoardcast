@@ -8,10 +8,6 @@
 
 #define UDP_PACKAGE_MAX_LEN 1450
 
-#define SERVER_PORT 10034
-#define CLIENT_PORT 10035
-
-
 #ifndef _WIN32
 #define SOCKET long long 
 #endif

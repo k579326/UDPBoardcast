@@ -10,7 +10,7 @@ void make_shutdown_pkg(boardcast_package_t* pkg)
 {
 	pkg->version = BOARDCAST_PROTOCAL_VERSION;
 	pkg->magic = BOARDCAST_MAGIC_NUM;
-	pkg->port = 10038;
+	pkg->port = SERVER_TCP_PORT;
 
 	memcpy(&pkg->sys_info, systemInfo(), sizeof(system_info_t));
 
@@ -21,7 +21,7 @@ void make_startup_pkg(boardcast_package_t* pkg)
 {
 	pkg->version = BOARDCAST_PROTOCAL_VERSION;
 	pkg->magic = BOARDCAST_MAGIC_NUM;
-	pkg->port = 10038;
+	pkg->port = SERVER_TCP_PORT;
 
 	memcpy(&pkg->sys_info, systemInfo(), sizeof(system_info_t));
 
@@ -32,7 +32,7 @@ void make_keepalive_pkg(boardcast_package_t* pkg)
 {
     pkg->version = BOARDCAST_PROTOCAL_VERSION;
     pkg->magic = BOARDCAST_MAGIC_NUM;
-    pkg->port = 10038;
+    pkg->port = SERVER_TCP_PORT;
 
     memcpy(&pkg->sys_info, systemInfo(), sizeof(system_info_t));
 

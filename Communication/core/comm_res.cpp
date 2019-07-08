@@ -15,14 +15,12 @@ static void _clientloop_process(void* param)
     client_loop_t* cl = (client_loop_t*)param;
     while (1) {
 
-        if (cl_conn_empty())
-            ssn_sleep(1);           // 解决客户端无连接情况下CPU占用过高问题
-
+        ssn_sleep(1);
         if (!uv_loop_alive(&cl->loop_info.loop))
         {
             break;
         }
-        uv_run(&cl->loop_info.loop, UV_RUN_DEFAULT);
+        uv_run(&cl->loop_info.loop, UV_RUN_ONCE);
     }
 }
 
@@ -32,11 +30,12 @@ static void _serverloop_process(void* param)
     
     while (1)
     {
+        ssn_sleep(1);
         if (!uv_loop_alive(&sl->loop_info.loop))
         {
             break;
         }
-        uv_run(&sl->loop_info.loop, UV_RUN_DEFAULT);
+        uv_run(&sl->loop_info.loop, UV_RUN_ONCE);
     }
 }
 
@@ -121,7 +120,7 @@ int init_tcp_conn(loop_type_t type, tcp_conn_t* conn)
 
 uv_async_t* cl_create_async()
 {
-    if (!g_ClientLoop.loop_info.inited && !g_ClientLoop.loop_info.running)
+    if (!g_ClientLoop.loop_info.inited || !g_ClientLoop.loop_info.running)
     {
         return NULL;
     }
@@ -378,7 +377,7 @@ static int _init_svr_tcp(uv_tcp_t* svrTcp)
     sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.S_un.S_addr = PhyIpAddress();
-    addr.sin_port = htons(10038);
+    addr.sin_port = htons(SERVER_TCP_PORT);
 
     err = uv_tcp_init_ex(&g_serverLoop.loop_info.loop, svrTcp, AF_INET);
     if (0 != err)
@@ -470,7 +469,7 @@ int uninit_server_loop()
 
 uv_async_t* sl_create_async()
 {
-    if (!g_serverLoop.loop_info.inited && !g_serverLoop.loop_info.running)
+    if (!g_serverLoop.loop_info.inited || !g_serverLoop.loop_info.running)
     {
         return NULL;
     }

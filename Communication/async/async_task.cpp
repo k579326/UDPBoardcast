@@ -35,8 +35,6 @@ int async_send(uint16_t connId, const void* indata, int inlen, void** outdata, i
     //uv_timer_init(comm_client_loop(), &task.timer);
 
     async->data = (void*)&task;
-    // 放入任务队列
-    //cl_task_add(task.common.taskId, (abs_task_t*)&task);
 
     // 发送异步任务
     uv_async_send(async);
@@ -70,7 +68,7 @@ int async_conn(const char* ip, short port, uint32_t timeout)
     {
         return ERR_NOT_READY;
     }
-
+    
     conn_task_t task;
 
     task.timeout = timeout;
@@ -114,11 +112,9 @@ int async_push(const void* indata, int inlen)
     task.indata.assign((char*)indata, inlen);
     uv_sem_init(&task.common.notify, 1);
     uv_sem_wait(&task.common.notify);
-    //uv_timer_init(comm_client_loop(), &task.timer);
 
     async->data = (void*)& task;
-    // 放入任务队列
-    //cl_task_add(task.common.taskId, (abs_task_t*)& task);
+    
     // 发送异步任务
     uv_async_send(async);
 

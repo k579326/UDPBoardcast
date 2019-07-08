@@ -20,8 +20,12 @@ typedef struct
 #define SVR_BOARDCAST_TIMESPACE (10 * 1000)		// 服务端广播间隔 10s
 #define SVR_BC_LISTEN_TIMESPACE 300             // 服务端广播监听间隔 300ms
 #define CLT_BC_LISTEN_TIMESPACE 30              // 客户端广播监听间隔 30ms
-#define SVR_KEEPALIVE_TIMEOUT   (SVR_BOARDCAST_TIMESPACE * 3)    // 服务端对客户端连接的保活时间, 3倍的广播间隔
+// #define SVR_KEEPALIVE_TIMEOUT   (SVR_BOARDCAST_TIMESPACE * 3)    // 服务端对客户端连接的保活时间, 3倍的广播间隔
 
+
+#define SERVER_TCP_PORT         10038           // TCP通信端口
+#define SERVER_BOARDCAST_PORT   10034
+#define CLIENT_BOARDCAST_PORT   10035
 
 
 

@@ -28,7 +28,7 @@ DEPRECATED static void _boardcast_shutdown_msg()
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = PhyBoardcastAddr();
     //server_addr.sin_addr.s_addr = INADDR_BROADCAST;
-    server_addr.sin_port = htons(CLIENT_PORT);
+    server_addr.sin_port = htons(CLIENT_BOARDCAST_PORT);
 
     make_shutdown_pkg(&pkg);
     sendto(g_svr_shutdown_sockfd, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
@@ -52,7 +52,7 @@ static void _oriented_feedback(const char* clientip)
 	}
 
 	clientAddr.sin_family = AF_INET;
-	clientAddr.sin_port = htons(CLIENT_PORT);
+	clientAddr.sin_port = htons(CLIENT_BOARDCAST_PORT);
 	inet_pton(AF_INET, clientip, &clientAddr.sin_addr);
 
 	make_startup_pkg(&pkg);
@@ -150,7 +150,7 @@ static void _boardcast_svr_msg(void* msg)
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = PhyBoardcastAddr();
     //server_addr.sin_addr.s_addr = INADDR_BROADCAST;
-    server_addr.sin_port = htons(CLIENT_PORT);
+    server_addr.sin_port = htons(CLIENT_BOARDCAST_PORT);
 
 	while (1)
 	{
@@ -233,7 +233,7 @@ static int _svr_listen_start()
 {
     int ret = 0;
 
-    g_svrbc_listen.sockfd = create_listen_udp_socket(SERVER_PORT);
+    g_svrbc_listen.sockfd = create_listen_udp_socket(SERVER_BOARDCAST_PORT);
     if (g_svrbc_listen.sockfd == -1)
     {
         return -1;
