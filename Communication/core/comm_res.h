@@ -5,6 +5,7 @@
 
 
 #include <map>
+#include <vector>
 
 #include "ssnet_define.h"
 #include "comm_define.h"
@@ -125,6 +126,7 @@ bool cl_conn_empty();
 int cl_task_add(uint64_t taskId, const abs_task_t* task);
 abs_task_t* cl_task_del(uint64_t taskId);
 abs_task_t* cl_task_find(uint64_t taskId);
+std::vector<rw_task_t*> cl_task_del_by_connId(uint16_t connId);
 std::map<uint64_t, abs_task_t*> cl_list_task();
 void cl_task_clr();
 

@@ -107,8 +107,15 @@ void idle_cb(uv_idle_t* handle)
 
 static void _cl_finish_task(abs_task_t* task)
 {
-    strcpy(task->errmsg, ssn_errmsg(task->err));
-    
+    // strcpy(task->errmsg, ssn_errmsg(task->err));
+    if (task->err < 0)
+    {
+        strcpy(task->errmsg, uv_err_name(task->err));
+    }
+    else
+    {
+        strcpy(task->errmsg, ssn_errmsg(task->err));
+    }
 
     cl_task_del(task->taskId);
     timer_data_t* td = cl_timer_find(task->taskId);
@@ -128,7 +135,14 @@ static void _cl_finish_task(abs_task_t* task)
 
 static void _sl_finish_task(abs_task_t* task)
 {
-    strcpy(task->errmsg, ssn_errmsg(task->err));
+    if (task->err < 0)
+    {
+        strcpy(task->errmsg, uv_err_name(task->err));
+    }
+    else
+    {
+        strcpy(task->errmsg, ssn_errmsg(task->err));
+    }
     // notify
     uv_sem_post(&task->notify);
 
@@ -173,8 +187,7 @@ static void write_cb(uv_write_t* req, int status)
     case RW:
         if (0 != status)
         {
-            ret = uverr_convert(status);
-            task->err = ret;
+            task->err = status;
             _cl_finish_task((abs_task_t*)task);
         }
         else
@@ -199,8 +212,7 @@ static void write_cb(uv_write_t* req, int status)
         delete (char*)req->data;       // 推送任务要释放
         break;
     case RESP:
-        ret = uverr_convert(status);
-        task->err = ret;
+        task->err = status;
         _sl_finish_task((abs_task_t*)task);
         break;
     default:
@@ -380,27 +392,33 @@ static void read_cb(uv_stream_t* stream,
 
     if (nread < 0){
 
-        err = uverr_convert(nread);
         uv_read_stop(stream);
         _safe_uv_close((uv_handle_t*)stream, close_cb);
 
         loop_info_t* loopInfo = (loop_info_t*)stream->loop->data;
-        if (loopInfo->type == CLIENT_LOOP){
+        if (loopInfo->type == CLIENT_LOOP)
+        {
             client_loop_t* clientLoop = (client_loop_t*)loopInfo;
+
             cl_conn_del2(conn);
             if (clientLoop->conn_cb)
                 clientLoop->conn_cb(conn->connId, conn->info.ip.c_str(), false);
+
+            vector<rw_task_t*> tasks = cl_task_del_by_connId(conn->connId);
+            for (vector<rw_task_t*>::iterator it = tasks.begin(); it != tasks.end(); it++){ 
+                (*it)->common.err = nread;
+                _cl_finish_task((abs_task_t*)&(*it));
+            }
+
         }
         else
         {
             sl_conn_del2(conn);
         }
-        // delete conn;
-        goto exit;
     }
-
-    _read_content_process((uv_tcp_t*)stream, nread, buf->base);
-
+    else{
+        _read_content_process((uv_tcp_t*)stream, nread, buf->base);
+    }
 exit:
     delete[] buf->base;
     //buf->len = 0;
@@ -412,9 +430,14 @@ exit:
 // 服务端监听回调
 void listen_cb(uv_stream_t* server, int status)
 {
+    char ip[64];
+    sockaddr_in addr;
+    int addrlen = sizeof(addr);
+    uint16_t connId;
     int err = 0;
+
     if (status != 0){
-        err = uverr_convert(status);
+        err = status;
         // TODO: LOG
         return;
     }
@@ -424,48 +447,37 @@ void listen_cb(uv_stream_t* server, int status)
     err = init_tcp_conn(SERVER_LOOP, conn);
     if (err != 0)
     {
-        delete conn;
-        err = uverr_convert(status);
-        // TODO: LOG
-        return;
+        goto exit;
     }
     err = uv_accept(server, (uv_stream_t*)&conn->tcp.handle);
     if (0 != err){
-        delete conn;
-        err = uverr_convert(err);
-        // TODO: LOG
-        return;
+        goto exit;
     }
 
-    char ip[64];
-    sockaddr_in addr;
-    int addrlen = sizeof(addr);
     err = uv_tcp_getpeername(&conn->tcp.handle, (sockaddr*)&addr, &addrlen);
     if (0 != err){
         _safe_uv_close((uv_handle_t*)&conn->tcp.handle, close_cb);
-        err = uverr_convert(err);
-        delete conn;
-        // TODO: LOG
-        return;
+        goto exit;
     }
 
     inet_ntop(AF_INET, &addr, ip, 64);
     conn->info.ip = ip;
     conn->info.port = -1;    // do nothing
-    
-    // 检查黑白名单
-    if (0){
-        _safe_uv_close((uv_handle_t*)&conn->tcp.handle, close_cb);
-        delete conn;
-        return;
-    }
 
     // 把连接添加至服务loop的连接表
-    uint16_t connId = ApplyConnIdForSvr();
+    connId = ApplyConnIdForSvr();
     sl_conn_add(connId, conn);
 
     // 给连接挂上读取请求
     uv_read_start((uv_stream_t*)&conn->tcp.handle, alloc_cb, read_cb);
+
+    return;
+
+exit:
+
+    delete conn;
+    err = status;
+    // TODO: LOG ERR
 
     return;
 }
@@ -505,12 +517,7 @@ static int _do_write(tcp_conn_t* conn, string& indata, abs_task_t* task)
 
     if (ret != 0)
     {
-        task->err = uverr_convert(ret);
-        goto exit;
-    }
-
-exit:
-    if (ret != 0){
+        task->err = ret;
         delete req;
     }
 
@@ -548,7 +555,7 @@ void connect_cb(uv_connect_t* req, int status)
     if (status != 0)
     {
         _safe_uv_close((uv_handle_t*)req->handle, close_cb);
-        task->common.err = uverr_convert(status);
+        task->common.err = status;
     }
     else
     {
@@ -616,7 +623,7 @@ static int _do_connect(abs_task_t* task)
 
     err = uv_tcp_connect(req, &reqData->conn->tcp.handle, (sockaddr*)&addr, connect_cb);
     if (err != 0){
-        task->err = uverr_convert(err);
+        task->err = err;
         _safe_uv_close((uv_handle_t*)&reqData->conn->tcp.handle, close_cb);
         // delete reqData->conn;
         delete reqData;

@@ -18,6 +18,7 @@ public:
         errmsg[ERR_CONN_NOT_EXIST] = "connect is lost";
         errmsg[ERR_CONN_ALREADY_EXIST] = "connnect already exist, can't connect again";
         errmsg[ERR_TIMEOUT] = "operation timeout";
+        errmsg[ERR_SHUTDOWN] = "loop is closed";
         errmsg[ERR_COMM_PROTO_VERSION] = "communication version error";
         errmsg[ERR_BAD_COMM_PACKAGE] = "bad communication package";
     }
@@ -27,11 +28,6 @@ public:
 };
 
 static ERRMAP g_errmap;
-
-int uverr_convert(int uverr)
-{
-    return 0;
-}
 
 
 const char* ssn_errmsg(int err)

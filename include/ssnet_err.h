@@ -16,8 +16,8 @@
 
 #define ERR_COMM_PROTO_VERSION  0x00000007
 #define ERR_BAD_COMM_PACKAGE    0x00000008
+#define ERR_UV_LIBRARY          0x00000009
 
-int uverr_convert(int uverr);
 const char* ssn_errmsg(int err);
 
 

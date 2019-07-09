@@ -14,7 +14,6 @@ static void _clientloop_process(void* param)
 {
     client_loop_t* cl = (client_loop_t*)param;
     while (1) {
-
         ssn_sleep(1);
         if (!uv_loop_alive(&cl->loop_info.loop))
         {
@@ -27,16 +26,7 @@ static void _clientloop_process(void* param)
 static void _serverloop_process(void* param)
 {
     server_loop_t* sl = (server_loop_t*)param;
-    
-    while (1)
-    {
-        ssn_sleep(1);
-        if (!uv_loop_alive(&sl->loop_info.loop))
-        {
-            break;
-        }
-        uv_run(&sl->loop_info.loop, UV_RUN_ONCE);
-    }
+    uv_run(&sl->loop_info.loop, UV_RUN_DEFAULT);
 }
 
 
@@ -110,10 +100,6 @@ int init_tcp_conn(loop_type_t type, tcp_conn_t* conn)
 
     conn->tcp.handle.data = conn;
 
-    if (err != 0)
-    {
-        err = uverr_convert(err);
-    }
     return err;
 }
 
@@ -313,6 +299,34 @@ abs_task_t* cl_task_find(uint64_t taskId)
     return task;
 }
 
+std::vector<rw_task_t*> cl_task_del_by_connId(uint16_t connId)
+{
+    std::vector<rw_task_t*> taskList;
+
+    std::map<uint64_t, abs_task_t*>::iterator it;
+    for (it = g_ClientLoop.taskTable.table.begin();
+         it != g_ClientLoop.taskTable.table.end(); )
+    {
+        if (it->second->type != RW)
+        {
+            it++;
+        }
+        else
+        {
+            if (((rw_task_t*)it->second)->connId == connId)
+            {
+                taskList.push_back((rw_task_t*)it->second);
+                it = g_ClientLoop.taskTable.table.erase(it);
+            }
+            else
+                it++;
+        }
+    }
+
+    return taskList;
+}
+
+
 std::map<uint64_t, abs_task_t*> cl_list_task()
 {
     return g_ClientLoop.taskTable.table;
@@ -382,16 +396,19 @@ static int _init_svr_tcp(uv_tcp_t* svrTcp)
     err = uv_tcp_init_ex(&g_serverLoop.loop_info.loop, svrTcp, AF_INET);
     if (0 != err)
     {
-        return uverr_convert(err);
+        // TODO: LOG
+        return ERR_UV_LIBRARY;
     }
     err = uv_tcp_bind(svrTcp, (sockaddr*)& addr, 0);
     if (0 != err)
     {
+        err = ERR_UV_LIBRARY;
         goto exit;
     }
     err = uv_listen((uv_stream_t*)svrTcp, 1, listen_cb);
     if (0 != err)
     {
+        err = ERR_UV_LIBRARY;
         goto exit;
     }
 
@@ -402,7 +419,7 @@ exit:
     uv_close((uv_handle_t*)svrTcp, close_cb);
     uv_run(&g_serverLoop.loop_info.loop, UV_RUN_ONCE);
 
-    return uverr_convert(err);
+    return err;
 }
 
 
