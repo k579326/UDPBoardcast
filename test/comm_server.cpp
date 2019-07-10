@@ -50,8 +50,9 @@ int main()
 
     getchar();
 
-    ssn_shutdown_server();
     nd_boardcast_uninit();
+    ssn_shutdown_server();
+
     //uv_sem_t sem;
     //uv_sem_init(&sem, 1);
     //uv_sem_wait(&sem);

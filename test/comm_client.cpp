@@ -13,7 +13,7 @@
 
 using namespace std;
 
-
+bool g_exit = false;
 static ConnMgr connmgr;
 
 
@@ -54,6 +54,10 @@ void client_send_msg(void* param)
 
     while (1)
     {
+        if (g_exit)
+        {
+            break;
+        }
         std::map < uint16_t, std::string> connMap = connmgr.GetAllConn();
         for (std::map < uint16_t, std::string>::iterator it = connMap.begin(); it != connMap.end(); it++)
         {
@@ -76,7 +80,11 @@ void client_send_msg(void* param)
                 printf("[Err Msg] Failed! To Server %s\n", it->second.c_str());
             }
         }
-        
+
+        if (g_exit)
+        {
+            break;
+        }
         ssn_sleep(200);
     }
 }
@@ -105,8 +113,13 @@ int main()
 
     getchar();
 
-    ssn_shutdown_client();
+    g_exit = true;
+    for (int i = 0; i < 1; i++){
+        uv_thread_join(&thread[i]);
+    }
+
     nd_boardcast_uninit();
+    ssn_shutdown_client();
     
     return 0;
 }

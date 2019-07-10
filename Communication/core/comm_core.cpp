@@ -723,6 +723,10 @@ static void _client_shutdown(client_loop_t* loopInfo)
     // _safe_uv_close((uv_handle_t*)&loopInfo->no_exit, close_cb);
     uv_mutex_destroy(&condlock);
     uv_cond_destroy(&cond);
+
+    uv_check_stop(&loopInfo->no_exit);
+    _safe_uv_close((uv_handle_t*)&loopInfo->no_exit, close_cb);
+
     return;
 }
 

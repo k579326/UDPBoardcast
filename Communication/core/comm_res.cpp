@@ -61,8 +61,6 @@ int stop_client_loop()
 {
     g_ClientLoop.loop_info.running = false;
     //uv_idle_stop(&g_ClientLoop.no_exit);
-    uv_check_stop(&g_ClientLoop.no_exit);
-    uv_close((uv_handle_t*)&g_ClientLoop.no_exit, close_cb);
     uv_thread_join(&g_ClientLoop.thread);
 
     return 0;
@@ -312,7 +310,7 @@ std::vector<rw_task_t*> cl_task_del_by_connId(uint16_t connId)
             if (((rw_task_t*)it->second)->connId == connId)
             {
                 taskList.push_back((rw_task_t*)it->second);
-                it = g_ClientLoop.taskTable.table.erase(it);
+                g_ClientLoop.taskTable.table.erase(it++);
             }
             else
                 it++;
