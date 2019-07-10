@@ -82,7 +82,7 @@ struct client_loop_t
     safe_timer_table timerTable;
 	
 	uv_thread_t thread;
-    uv_idle_t no_exit;              // 占用客户端Loop, 使客户端
+    uv_check_t no_exit;              // 占用客户端Loop, 使客户端
     ssn_pushmsg_cb pushmsg_cb;
     ssn_conn_changed_cb conn_cb;
 };
@@ -115,7 +115,6 @@ int init_tcp_conn(loop_type_t type, tcp_conn_t* conn);
 
 int cl_conn_add(uint16_t connId, tcp_conn_t* conn);
 tcp_conn_t* cl_conn_del(uint16_t connId);
-void cl_conn_del2(const tcp_conn_t* conn);
 tcp_conn_t* cl_conn_find(uint16_t connId);
 tcp_conn_t* cl_conn_find2(const char* ip);
 std::map<uint16_t, tcp_conn_t*> cl_conn_list();
@@ -150,7 +149,6 @@ int uninit_server_loop();
 
 int sl_conn_add(uint16_t connId, tcp_conn_t* conn);
 tcp_conn_t* sl_conn_del(uint16_t connId);
-void sl_conn_del2(const tcp_conn_t* conn);
 tcp_conn_t* sl_conn_find(uint16_t connId);
 std::map<uint16_t, tcp_conn_t*> sl_conn_list();
 void sl_conn_clr();

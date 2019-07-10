@@ -171,7 +171,6 @@ static void _boardcast_svr_msg(void* msg)
 		{
 			// TODO:
 		}
-
         g_slp.sleep(SVR_BOARDCAST_TIMESPACE);
 	}
 

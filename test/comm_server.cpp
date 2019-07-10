@@ -30,7 +30,7 @@ void server_thread(void* param)
     char pushmsg[] = "push msg!";
     while (1)
     {
-        ssn_push(pushmsg, strlen(pushmsg));
+        //ssn_push(pushmsg, strlen(pushmsg));
         ssn_sleep(2000);
     }
 }

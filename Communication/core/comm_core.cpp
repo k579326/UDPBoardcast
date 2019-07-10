@@ -133,6 +133,12 @@ static void _cl_finish_task(abs_task_t* task)
 }
 
 
+void check_cb(uv_check_t* handle)
+{
+
+}
+
+
 static void _sl_finish_task(abs_task_t* task)
 {
     if (task->err < 0)
@@ -149,7 +155,7 @@ static void _sl_finish_task(abs_task_t* task)
     return;
 }
 
-static void timer_cb(uv_timer_t* handle)
+void timer_cb(uv_timer_t* handle)
 {
     timer_data_t* td = (timer_data_t*)handle->data;
 
@@ -400,7 +406,7 @@ static void read_cb(uv_stream_t* stream,
         {
             client_loop_t* clientLoop = (client_loop_t*)loopInfo;
 
-            cl_conn_del2(conn);
+            cl_conn_del(conn->connId);
             if (clientLoop->conn_cb)
                 clientLoop->conn_cb(conn->connId, conn->info.ip.c_str(), false);
 
@@ -413,7 +419,7 @@ static void read_cb(uv_stream_t* stream,
         }
         else
         {
-            sl_conn_del2(conn);
+            sl_conn_del(conn->connId);
         }
     }
     else{
@@ -775,8 +781,6 @@ static void _do_shutdown(loop_info_t* loopInfo)
     }
     loopInfo->running = false;
 }
-
-
 
 
 void async_cb(uv_async_t* handle)

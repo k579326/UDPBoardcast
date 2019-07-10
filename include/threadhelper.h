@@ -22,7 +22,7 @@ public:
         
         int t = 0;
         uv_mutex_lock(&mutex_);
-        t = uv_cond_timedwait(&cond_, &mutex_, millisecond);
+        t = uv_cond_timedwait(&cond_, &mutex_, millisecond * 1000 * 1000);
         uv_mutex_unlock(&mutex_);
         
         return t != 0;

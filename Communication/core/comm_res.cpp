@@ -14,12 +14,7 @@ static void _clientloop_process(void* param)
 {
     client_loop_t* cl = (client_loop_t*)param;
     while (1) {
-        ssn_sleep(1);
-        if (!uv_loop_alive(&cl->loop_info.loop))
-        {
-            break;
-        }
-        uv_run(&cl->loop_info.loop, UV_RUN_ONCE);
+        uv_run(&cl->loop_info.loop, UV_RUN_DEFAULT);
     }
 }
 
@@ -52,8 +47,10 @@ void init_client_loop(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
 
 int start_client_loop()
 {
-    uv_idle_init(&g_ClientLoop.loop_info.loop, &g_ClientLoop.no_exit);
-    uv_idle_start(&g_ClientLoop.no_exit, idle_cb);
+    uv_check_init(&g_ClientLoop.loop_info.loop, &g_ClientLoop.no_exit);
+    uv_check_start(&g_ClientLoop.no_exit, check_cb);
+    // uv_idle_init(&g_ClientLoop.loop_info.loop, &g_ClientLoop.no_exit);
+    // uv_idle_start(&g_ClientLoop.no_exit, idle_cb);
     uv_thread_create(&g_ClientLoop.thread, _clientloop_process, &g_ClientLoop);
     g_ClientLoop.loop_info.running = true;
     
@@ -65,7 +62,8 @@ int start_client_loop()
 int stop_client_loop()
 {
     g_ClientLoop.loop_info.running = false;
-    uv_idle_stop(&g_ClientLoop.no_exit);
+    //uv_idle_stop(&g_ClientLoop.no_exit);
+    uv_check_stop(&g_ClientLoop.no_exit);
     uv_close((uv_handle_t*)&g_ClientLoop.no_exit, close_cb);
     uv_thread_join(&g_ClientLoop.thread);
 
