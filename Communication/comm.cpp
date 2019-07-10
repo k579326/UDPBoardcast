@@ -8,15 +8,23 @@
 #include "Communication/core/comm_res.h"
 
 
-int ssn_startup_client(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
+void ssn_startup_client(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
 {
     init_client_loop(pushmsg_cb, conn_cb);
-    return start_client_loop();
+    start_client_loop();
+    return;
 }
 
 int ssn_shutdown_client()
 {
-    async_close_client();
+    int err = 0;
+    
+    err = async_close_client();
+    if (err != 0)
+    {
+        return err;
+    }
+
     return uninit_client_loop();
 }
 
@@ -30,7 +38,12 @@ int ssn_startup_server(ssn_work_process_cb cb, size_t workthread_num)
 
 int ssn_shutdown_server()
 {
-    async_close_server();
+    int err = 0;
+    err = async_close_server();
+    if (err != 0)
+    {
+        return err;
+    }
     return uninit_server_loop();
 }
 

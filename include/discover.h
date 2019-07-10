@@ -12,10 +12,6 @@
 
 int nd_set_running_type(int runType);
 
-int nd_boardcast_init();
-
-int nd_boardcast_uninit();
-
 
 
 

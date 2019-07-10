@@ -14,11 +14,11 @@
 
 typedef struct
 {
-	bool pause;
+	//bool pause;
 	SOCKET sockfd;
 	uv_thread_t thread;
-	uv_mutex_t mutex;
-	uv_cond_t cond;
+	//uv_mutex_t mutex;
+	//uv_cond_t cond;
 	uv_sem_t sem_exit;
 }socket_env_t;
 

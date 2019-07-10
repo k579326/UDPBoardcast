@@ -213,8 +213,8 @@ unsigned long PhyBoardcastAddr()
     if (_PhyNetConfigInfo(&nw))
     {
         ULONG ip, mask;
-        inet_pton(AF_INET, nw.ip, &ip);
-        inet_pton(AF_INET, nw.mask, &mask);
+        ip = inet_addr(nw.ip);
+        mask = inet_addr(nw.mask);
         boardcastaddr = ip | ~mask;
     }
 
@@ -228,7 +228,7 @@ unsigned long PhyIpAddress()
 
     if (_PhyNetConfigInfo(&nw))
     {
-        inet_pton(AF_INET, nw.ip, &ip);
+        ip = inet_addr(nw.ip);
     }
 
     return ip;

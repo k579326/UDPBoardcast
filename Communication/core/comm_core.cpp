@@ -466,7 +466,8 @@ void listen_cb(uv_stream_t* server, int status)
         goto exit;
     }
 
-    inet_ntop(AF_INET, &addr, ip, 64);
+    uv_ip4_name(&addr, ip, 64);
+    //inet_ntop(AF_INET, &addr, ip, 64);
     conn->info.ip = ip;
     conn->info.port = -1;    // do nothing
 
@@ -620,10 +621,7 @@ static int _do_connect(abs_task_t* task)
 
     uv_connect_t* req = new uv_connect_t;
     sockaddr_in addr;
-
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(ct->port);
-    inet_pton(AF_INET, ct->ip, &addr.sin_addr);
+    uv_ip4_addr(ct->ip, ct->port, &addr);
 
     req->data = reqData;
 

@@ -38,26 +38,23 @@ void server_thread(void* param)
 
 int main()
 {
+    int err;
     uv_thread_t thread;
 
-    ssn_startup_server(_server_msg_handler, 16);
+    err = ssn_startup_server(_server_msg_handler, 16);
+    if (err != 0)
+    {
+        return err;
+    }
 
     uv_thread_create(&thread, server_thread, NULL);
 
-
-    nd_boardcast_init();
     nd_set_running_type(SVR_RUN_TYPE);
-
     getchar();
 
-    nd_boardcast_uninit();
+    nd_set_running_type(NONE_RUN_TYPE);
     ssn_shutdown_server();
-
-    //uv_sem_t sem;
-    //uv_sem_init(&sem, 1);
-    //uv_sem_wait(&sem);
-    //uv_sem_wait(&sem);
-
+    
     return 0;
 }
 

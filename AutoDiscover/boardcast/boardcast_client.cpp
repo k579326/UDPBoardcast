@@ -79,14 +79,7 @@ static void _cltbc_listen_thread(void* param)
 
 		buflen = sizeof(pkg);
 		addrlen = sizeof(peerAddr);
-
-		uv_mutex_lock(&g_cltbc_listen.mutex);
-		if (g_cltbc_listen.pause)
-		{
-			uv_cond_wait(&g_cltbc_listen.cond, &g_cltbc_listen.mutex);
-		}
 		ret = recvfrom(g_cltbc_listen.sockfd, (char*)&pkg, buflen, 0, (sockaddr*)&peerAddr, &addrlen);
-		uv_mutex_unlock(&g_cltbc_listen.mutex);
 
 		if (ret != buflen)
 		{
@@ -161,31 +154,6 @@ static int _client_startup_boardcast()
 // }
 
 
-
-int clt_model_init()
-{
-	int ret = 0;
-	
-	// g_clt_stutdown_socket = create_udp_socket();
-	// if (g_clt_stutdown_socket == -1)
-	// {
-	// 	ret = -1;  // TODO:
-	// 	goto exit;
-	// }
-
-	g_cltbc_listen.pause = true;
-	uv_mutex_init(&g_cltbc_listen.mutex);
-	uv_cond_init(&g_cltbc_listen.cond);
-	uv_sem_init(&g_cltbc_listen.sem_exit, 1);
-	uv_sem_wait(&g_cltbc_listen.sem_exit);
-
-	uv_thread_create(&g_cltbc_listen.thread, _cltbc_listen_thread, NULL);
-
-
-	return ret;
-}
-
-
 int clt_model_start()
 {
 	int ret = 0;
@@ -204,12 +172,9 @@ int clt_model_start()
         goto exit;
     }
 
-
-	uv_mutex_lock(&g_cltbc_listen.mutex);
-	g_cltbc_listen.pause = false;
-	uv_mutex_unlock(&g_cltbc_listen.mutex);
-
-	uv_cond_signal(&g_cltbc_listen.cond);
+    uv_sem_init(&g_cltbc_listen.sem_exit, 1);
+    uv_sem_wait(&g_cltbc_listen.sem_exit);
+    uv_thread_create(&g_cltbc_listen.thread, _cltbc_listen_thread, NULL);
 
 	_client_startup_boardcast();
 
@@ -221,36 +186,18 @@ exit:
         // cleansocket(&g_clt_stutdown_socket);
     }
 
-	return 0;
+	return ret;
 }
 int clt_model_stop()
 {
 	int ret;
-	uv_mutex_lock(&g_cltbc_listen.mutex);
-	g_cltbc_listen.pause = true;
-	uv_mutex_unlock(&g_cltbc_listen.mutex);
+
+    uv_sem_post(&g_cltbc_listen.sem_exit);
+    uv_thread_join(&g_cltbc_listen.thread);
 
     cleansocket(&g_cltbc_listen.sockfd);
     cleansocket(&g_clt_startup_socket);
-
-    // 客户端和服务端关闭时都不再通知对方
-	// _client_shutdown_oriented_notify();
-
-	return 0;
-}
-int clt_model_uninit()
-{
-    clt_model_stop();
-
-	uv_sem_post(&g_cltbc_listen.sem_exit);
-	uv_cond_signal(&g_cltbc_listen.cond);
-	uv_thread_join(&g_cltbc_listen.thread);
-
-	uv_cond_destroy(&g_cltbc_listen.cond);
-	uv_mutex_destroy(&g_cltbc_listen.mutex);
-	uv_sem_destroy(&g_cltbc_listen.sem_exit);
-
-    // cleansocket(&g_clt_stutdown_socket);
+    uv_sem_destroy(&g_cltbc_listen.sem_exit);
 
 	return 0;
 }

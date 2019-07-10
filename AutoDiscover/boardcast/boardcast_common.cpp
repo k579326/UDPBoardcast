@@ -48,17 +48,15 @@ bool checksocket(SOCKET sockfd)
 // ²ÎÊı ip: ÍøÂçĞò
 std::string NetIpToString(in_addr ip)
 {
-	char ipstring[64];
-	inet_ntop(AF_INET, &ip, ipstring, 64);
-	return ipstring;
+	return inet_ntoa(ip);
 }
 
 // ·µ»ØÖµ£º ÍøÂçĞò
 in_addr StringToNetIp(const char* ip)
 {
-	in_addr addr;
-	inet_pton(AF_INET, ip, &addr);
-	return addr;
+    sockaddr_in addr;
+    uv_ip4_addr(ip, 0, &addr);
+	return addr.sin_addr;
 }
 
 
