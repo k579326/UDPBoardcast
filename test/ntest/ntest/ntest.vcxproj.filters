@@ -33,6 +33,9 @@
     <ClInclude Include="CSDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="model.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ntest.cpp">
@@ -45,6 +48,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="CSDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="model.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

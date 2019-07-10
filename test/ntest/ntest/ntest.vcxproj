@@ -23,7 +23,7 @@
     <ProjectGuid>{765226BB-CD72-41A9-A279-2A1E03339AF9}</ProjectGuid>
     <Keyword>MFCProj</Keyword>
     <RootNamespace>ntest</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -44,8 +44,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -184,6 +184,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CSDlg.h" />
+    <ClInclude Include="model.h" />
     <ClInclude Include="ntest.h" />
     <ClInclude Include="ntestDlg.h" />
     <ClInclude Include="Resource.h" />
@@ -192,6 +193,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CSDlg.cpp" />
+    <ClCompile Include="model.cpp" />
     <ClCompile Include="ntest.cpp" />
     <ClCompile Include="ntestDlg.cpp" />
     <ClCompile Include="stdafx.cpp">
