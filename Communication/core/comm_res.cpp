@@ -13,9 +13,7 @@ static server_loop_t g_serverLoop;
 static void _clientloop_process(void* param)
 {
     client_loop_t* cl = (client_loop_t*)param;
-    while (1) {
-        uv_run(&cl->loop_info.loop, UV_RUN_DEFAULT);
-    }
+    uv_run(&cl->loop_info.loop, UV_RUN_DEFAULT);
 }
 
 static void _serverloop_process(void* param)

@@ -35,8 +35,7 @@ public:
     
 private:
     uv_mutex_t mutex_;
-    uv_cond_t cond_;
-        
+    uv_cond_t cond_;   
 };
 
 

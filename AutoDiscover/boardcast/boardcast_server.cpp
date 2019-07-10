@@ -166,6 +166,13 @@ static void _boardcast_svr_msg(void* msg)
 			uv_cond_wait(&g_svr_bc.cond, &g_svr_bc.mutex);
 		}
 		uv_mutex_unlock(&g_svr_bc.mutex);
+
+        // 再检查一次
+        if (uv_sem_trywait(&g_svr_bc.sem_exit) == 0)
+        {
+            break;
+        }
+
 		ret = sendto(g_svr_bc.sockfd, (char*)&pkg, sizeof(boardcast_package_t), 0, (sockaddr*)&server_addr, sizeof(server_addr));
 		if (ret != sizeof(boardcast_package_t))
 		{
@@ -173,8 +180,6 @@ static void _boardcast_svr_msg(void* msg)
 		}
         g_slp.sleep(SVR_BOARDCAST_TIMESPACE);
 	}
-
-	// TODO: exit log
 
 	return;
 }
