@@ -96,8 +96,6 @@ int main()
     
     ssn_startup_client(push_msg_handler, connect_changed_handler);
 
-    // ssn_connect("192.168.0.233", 10038, 3000);
-    // ssn_connect("192.168.1.3", 10038, 3000);
     for (int i= 0; i < 1; i++)
         uv_thread_create(&thread[i], client_send_msg, NULL);
     
