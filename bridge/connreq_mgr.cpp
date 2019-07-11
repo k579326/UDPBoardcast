@@ -72,7 +72,8 @@ void HostChangeReq::threadpool_work(void* thread_param)
     err = ssn_connect(param->peer.ip.c_str(), param->peer.port, CONN_TIMEOUT);
     if (0 != err)
     {
-        // LOG:
+        // TODO: LOG
+        printf("[Conn Msg] 连接%s失败！errcode:%d", param->peer.ip.c_str(), err);
     }
 
     // 连接完成，删除连接请求
