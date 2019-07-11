@@ -8,7 +8,7 @@
 #include "sysheader.h"
 #include "threadpool.h"
 #include "Communication/comm_internal.h"
-
+#include "ssnet_err.h"
 
 class HostChangeReq
 {
@@ -73,7 +73,7 @@ void HostChangeReq::threadpool_work(void* thread_param)
     if (0 != err)
     {
         // TODO: LOG
-        printf("[Conn Msg] 连接%s失败！errcode:%d", param->peer.ip.c_str(), err);
+        printf("[Conn Msg] connect %s failed! errcode:%d, %s\n", param->peer.ip.c_str(), err, ssn_errmsg(err));
     }
 
     // 连接完成，删除连接请求
