@@ -2,7 +2,6 @@
 #include <stdint.h>
 
 
-#include "cb_thread.h"
 #include "uv.h"
 
 #include "boardcast_client.h"
@@ -97,7 +96,7 @@ static void _cltbc_listen_thread(void* param)
             }
 		}
 
-		CB_THREAD_SLEEP_MS(CLT_BC_LISTEN_TIMESPACE);
+		ssn_sleep(CLT_BC_LISTEN_TIMESPACE);
 	}
 	
 	// TODO: exit log

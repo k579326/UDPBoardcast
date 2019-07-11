@@ -9,5 +9,5 @@ add_library(net_discover STATIC discover.cpp
 			${SELECTADDRSRC} ${BOARDCASTSRC} ${BOARDCASTHEADER})
 
 
-target_link_libraries(net_discover libuv cb_thread cb_sysinfo bridge)
+target_link_libraries(net_discover libuv cb_sysinfo bridge)
 

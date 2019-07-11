@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include "boardcast_server.h"
 
-#include "cb_thread.h"
 #include "boardcast_protocol.h"
 #include "boardcast_common.h"
 
@@ -125,7 +124,7 @@ static void _svrbc_listen_thread(void* param)
 
         // 刷新keepalive时间
         // SafeCltList::getInstance()->RefreshAliveTime();
-		CB_THREAD_SLEEP_MS(SVR_BC_LISTEN_TIMESPACE);
+		ssn_sleep(SVR_BC_LISTEN_TIMESPACE);
 	}
 
 	// TODO: exit log
