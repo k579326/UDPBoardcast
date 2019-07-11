@@ -5,7 +5,7 @@ include (cmake/platform_verify.cmake)	# 平台检测及设置
 include (cmake/compiler_setting.cmake)  # 各编译器的编译选项设置
 
 include_directories(./)
-include_directories(include)
+include_directories(include/internal)
 include_directories(third/cb_sysinfo/inc)
 include_directories(third/cb_thread/inc)
 include_directories(third/libuv/include)

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "discover.h"
-#include "Communication/comm.h"
+#include "comm.h"
 #include "sysheader.h"
 #include "uv.h"
 

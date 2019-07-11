@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "Communication/comm.h"
+#include "comm.h"
 #include "comm_test_define.hpp"
 #include "discover.h"
 #include "sysheader.h"
