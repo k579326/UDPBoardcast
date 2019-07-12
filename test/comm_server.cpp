@@ -49,10 +49,10 @@ int main()
 
     uv_thread_create(&thread, server_thread, NULL);
 
-    nd_set_running_type(SVR_RUN_TYPE);
+    ssn_set_boardcast_model(SVR_RUN_TYPE);
     getchar();
 
-    nd_set_running_type(NONE_RUN_TYPE);
+    ssn_set_boardcast_model(NONE_RUN_TYPE);
     ssn_shutdown_server();
     
     return 0;

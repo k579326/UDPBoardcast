@@ -168,7 +168,7 @@ int main()
         deliver_addsvr_msg(configs[i].ip.c_str(), configs[i].port);
     }
 
-    nd_set_running_type(CLT_RUN_TYPE);
+    ssn_set_boardcast_model(CLT_RUN_TYPE);
     getchar();
 
     g_exit = true;
@@ -176,7 +176,7 @@ int main()
         uv_thread_join(&thread[i]);
     }
 
-    nd_set_running_type(NONE_RUN_TYPE);
+    ssn_set_boardcast_model(NONE_RUN_TYPE);
     err = ssn_shutdown_client();
     
     return err;

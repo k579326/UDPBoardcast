@@ -8,7 +8,7 @@
 
 static int g_runType = NONE_RUN_TYPE;
 
-int nd_set_running_type(int runType)
+int ssn_set_boardcast_model(int runType)
 {
 	int retc = -1, rets = -1;
 

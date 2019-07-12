@@ -10,7 +10,7 @@
 #define MIX_RUN_TYPE  0x03
 
 
-int nd_set_running_type(int runType);
+int ssn_set_boardcast_model(int runType);
 
 
 
