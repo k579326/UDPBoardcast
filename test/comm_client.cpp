@@ -159,7 +159,7 @@ int main()
 
     ssn_startup_client(push_msg_handler, connect_changed_handler);
 
-    for (int i= 0; i < 1; i++)
+    for (int i= 0; i < 4; i++)
         uv_thread_create(&thread[i], client_send_msg, NULL);
     
     ssn_sleep(100);

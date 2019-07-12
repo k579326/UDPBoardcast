@@ -34,12 +34,24 @@ typedef struct
 }comm_tcp_t;
 
 
+
+
+
+
+
+
+
 typedef struct
 {
     uint64_t    taskId;
     uv_timer_t  timer;
-    void*       data;
+    void*       data;       // 定时器超时后需要释放的资源
 }timer_data_t;
+
+
+
+
+
 
 typedef struct
 {

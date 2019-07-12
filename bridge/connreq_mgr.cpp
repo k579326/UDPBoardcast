@@ -91,7 +91,7 @@ void HostChangeReq::addsvrconn(const char* ip, short port)
     std::list<peer_info_t>::iterator it;
     for (it = reqs.begin(); it != reqs.end(); it++)
     {
-        if (it->ip == it->ip)
+        if (it->ip == ip)
         {
             break;
         }
