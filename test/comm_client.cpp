@@ -41,7 +41,6 @@ void push_msg_handler(uint16_t connId, const void* data, int datalen)
     char pushmsg[256] = {0};
 
     memcpy(pushmsg, data, datalen);
-
     string ip = connmgr.FindConn(connId);
 
     printf("[Push Msg] %s From Server: %s\n", pushmsg, ip.c_str());

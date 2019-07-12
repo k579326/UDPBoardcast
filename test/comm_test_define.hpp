@@ -57,7 +57,11 @@ public:
     {
         std::string x;
         uv_mutex_lock(&connListLock);
-        x = connList.find(connId)->second;
+        std::map<uint16_t, std::string>::iterator it = connList.find(connId);
+        if (it != connList.end())
+        {
+            x = it->second;
+        }
         uv_mutex_unlock(&connListLock);
         return x;
     }

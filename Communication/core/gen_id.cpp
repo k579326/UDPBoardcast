@@ -47,7 +47,12 @@ public:
     {
         uint16_t x;
         uv_mutex_lock(&lock_);
+
+        // Never Generate ConnId as zero
+        if (taskId_ == INVALID_CONNID)
+            taskId_++;
         x = taskId_++;
+
         uv_mutex_unlock(&lock_);
         return x;
     }

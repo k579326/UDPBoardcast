@@ -576,6 +576,7 @@ void connect_cb(uv_connect_t* req, int status)
     {
         // 把连接添加至loop的连接表
         uint16_t connId = ApplyConnIdForClt();
+        reqData->conn->connId = connId;
         cl_conn_add(connId, reqData->conn);
 
         client_loop_t* loopInfo = (client_loop_t*)req->handle->loop->data;
@@ -617,7 +618,8 @@ static int _do_connect(abs_task_t* task)
     reqData->taskId = ct->common.taskId;
     reqData->conn->info.ip = ct->ip;
     reqData->conn->info.port = ct->port;
-
+    reqData->conn->connId = INVALID_CONNID;
+    
     err = init_tcp_conn(CLIENT_LOOP, reqData->conn);
     if (0 != err)
     {
