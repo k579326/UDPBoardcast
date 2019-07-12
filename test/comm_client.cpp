@@ -148,17 +148,19 @@ static int load_config(vector<svr_config_t>& configs)
 }
 
 
+#define THREAD_NUM 4
+
 int main()
 {
     int err = 0;
-    uv_thread_t thread[1];
+    uv_thread_t thread[THREAD_NUM];
     vector<svr_config_t> configs;
-    // º”‘ÿ≈‰÷√
+    // Âä†ËΩΩÈÖçÁΩÆ
     load_config(configs);
 
     ssn_startup_client(push_msg_handler, connect_changed_handler);
 
-    for (int i= 0; i < 4; i++)
+    for (int i= 0; i < THREAD_NUM; i++)
         uv_thread_create(&thread[i], client_send_msg, NULL);
     
     ssn_sleep(100);

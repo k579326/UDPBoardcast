@@ -120,7 +120,7 @@ void HostChangeReq::delsvrconn(const char* ip)
     std::list<peer_info_t>::iterator it;
     for (it = reqs.begin(); it != reqs.end(); )
     {
-        if (it->ip == it->ip)
+        if (it->ip == ip)
         {
            it = reqs.erase(it);
         }
