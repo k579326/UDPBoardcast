@@ -2,6 +2,7 @@
 
 cmake_minimum_required(VERSION 3.0)
 
+include_directories(../include)
 include_directories(../AutoDiscover)
 include_directories(tinyxml)
 add_subdirectory(tinyxml)

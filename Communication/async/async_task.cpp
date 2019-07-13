@@ -80,8 +80,7 @@ int async_conn(const char* ip, short port, uint32_t timeout)
     task.common.type = CONNECT;
     uv_sem_init(&task.common.notify, 1);
     uv_sem_wait(&task.common.notify);
-    task.common.taskId = ApplyTaskId(); 
-    //uv_timer_init(comm_client_loop(), &task.timer);
+    task.common.taskId = ApplyTaskId();
 
     async->data = (void*)&task;
     

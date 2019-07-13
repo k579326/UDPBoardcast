@@ -5,11 +5,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "comm.h"
+#include "ssnet_api.h"
 #include "comm_test_define.hpp"
-#include "discover.h"
 #include "sysheader.h"
-#include "bridge/connreq_mgr.h"
 #include "tinyxml.h"
 
 using namespace std;
@@ -163,17 +161,16 @@ int main()
     for (int i= 0; i < THREAD_NUM; i++)
         uv_thread_create(&thread[i], client_send_msg, NULL);
     
-    ssn_sleep(100);
     for (int i = 0; i < configs.size(); i++)
     {
-        deliver_addsvr_msg(configs[i].ip.c_str(), configs[i].port);
+        ssn_connect_oriented(configs[i].ip.c_str(), configs[i].port);
     }
 
     ssn_set_boardcast_model(CLT_RUN_TYPE);
     getchar();
 
     g_exit = true;
-    for (int i = 0; i < 1; i++){
+    for (int i = 0; i < THREAD_NUM; i++){
         uv_thread_join(&thread[i]);
     }
 

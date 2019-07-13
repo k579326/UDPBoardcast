@@ -16,7 +16,7 @@ public:
         errmsg[ERR_PARAM] = "invalid param";
         errmsg[ERR_NOT_READY] = "net module state wrong";
         errmsg[ERR_CONN_NOT_EXIST] = "connect is lost";
-        errmsg[ERR_CONN_ALREADY_EXIST] = "connnect already exist, can't connect again";
+        errmsg[ERR_CONN_ALREADY_EXIST] = "connect already exist, can't connect again";
         errmsg[ERR_TIMEOUT] = "operation timeout";
         errmsg[ERR_SHUTDOWN] = "loop is closed";
         errmsg[ERR_COMM_PROTO_VERSION] = "communication version error";

@@ -2,8 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "discover.h"
-#include "comm.h"
+#include "ssnet_api.h"
 #include "sysheader.h"
 #include "uv.h"
 

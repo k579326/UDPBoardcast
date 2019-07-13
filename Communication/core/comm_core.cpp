@@ -217,7 +217,6 @@ static void write_cb(uv_write_t* req, int status)
                 // 定时器放到timer队列
                 cl_timer_add(task->taskId, td);
             }
-            
         }
         break;
 

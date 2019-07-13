@@ -6,7 +6,7 @@
 #include "async/async_task.h"
 #include "ssnet_err.h"
 #include "Communication/core/comm_res.h"
-
+#include "bridge/connreq_mgr.h"
 
 void ssn_startup_client(ssn_pushmsg_cb pushmsg_cb, ssn_conn_changed_cb conn_cb)
 {
@@ -78,6 +78,13 @@ int ssn_connect(const char* ip, short port, uint32_t timeout)
 
     return async_conn(ip, port, timeout);
 }
+
+void ssn_connect_oriented(const char* ip, short port)
+{   
+    deliver_addsvr_msg(ip, port);
+    return;
+}
+
 
 int ssn_push(const void* indata, int inlen)
 {
